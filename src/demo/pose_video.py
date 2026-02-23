@@ -3,7 +3,7 @@ import mediapipe as mp
 import os
 
 #Folder with input videos
-input_folder = "videos"
+input_folder = "videos/_test"
 
 #Mediapipe initialization
 mp_pose = mp.solutions.pose
