@@ -1,9 +1,11 @@
 import cv2
 import mediapipe as mp
 import os
+from pathlib import Path
 
 #Folder with input images
-input_folder = "images"
+base_dir = Path(__file__).resolve().parents[2]
+input_folder = base_dir / "images"
 
 #Mediapipe initialization
 mp_pose = mp.solutions.pose
