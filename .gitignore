@@ -212,4 +212,5 @@ data/dataset.csv
 models/
 videos/
 demo_videos/
+demo_images/
 fitness_app.db
