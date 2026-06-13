@@ -17,7 +17,7 @@ output_dir = base_dir / "data"
 output_file = output_dir / "dataset.csv"
 
 data_list = []
-metadata_columns = ["label", "source_file", "source_mtime"]
+metadata_columns = ["label", "split", "source_file", "source_mtime"]
 processed_videos = {}
 existing_df = None
 
@@ -26,7 +26,7 @@ print("Collecting data, please wait")
 if output_file.exists():
     existing_df = pd.read_csv(output_file)
 
-    if {"source_file", "source_mtime"}.issubset(existing_df.columns):
+    if {"split", "source_file", "source_mtime"}.issubset(existing_df.columns):
         processed_videos = (
             existing_df[["source_file", "source_mtime"]]
             .drop_duplicates()
@@ -41,49 +41,61 @@ if output_file.exists():
 if not os.path.exists(video_dir): 
     print(f"Error, '{video_dir}' is not found")
 else:
-    for label in os.listdir(video_dir):
-        folder_path = video_dir / label
+    for split in ["train", "validation", "test"]:
+        split_path = video_dir / split
 
-        if not os.path.isdir(folder_path):
+        if not os.path.isdir(split_path):
             continue
-        
-        print(f"\nProcessing category: {label.upper()}")
 
-        for video_name in os.listdir(folder_path):
-            video_path = folder_path / video_name
-            video_key = str(video_path.relative_to(base_dir))
-            video_mtime = video_path.stat().st_mtime
+        print(f"\nProcessing split: {split.upper()}")
 
-            if processed_videos.get(video_key) == video_mtime:
-                print(f"Skipping already processed video: {video_key}")
+        for label in os.listdir(split_path):
+            folder_path = split_path / label
+
+            if not os.path.isdir(folder_path):
                 continue
 
-            cap = cv2.VideoCapture(str(video_path))
-            frame_count = 0
+            print(f"\nProcessing category: {label.upper()}")
 
-            while cap.isOpened():
-                ret, frame =cap.read()
-                if not ret:
-                    break
+            for video_name in os.listdir(folder_path):
+                video_path = folder_path / video_name
 
-                image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                results = pose.process(image_rgb)
-
-                if not results.pose_landmarks:
+                if not video_path.is_file():
                     continue
 
-                landmarks = results.pose_landmarks.landmark
+                video_key = str(video_path.relative_to(base_dir))
+                video_mtime = video_path.stat().st_mtime
 
-                row = []
-                for lm in landmarks:
-                    row.extend([lm.x, lm.y, lm.z, lm.visibility])
+                if processed_videos.get(video_key) == video_mtime:
+                    print(f"Skipping already processed video: {video_key}")
+                    continue
 
-                row = [label, video_key, video_mtime] + row
-                data_list.append(row)
-                frame_count += 1
+                cap = cv2.VideoCapture(str(video_path))
+                frame_count = 0
 
-            cap.release()
-            print(f"Processed {video_key} -> collected frames: {frame_count}")
+                while cap.isOpened():
+                    ret, frame =cap.read()
+                    if not ret:
+                        break
+
+                    image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    results = pose.process(image_rgb)
+
+                    if not results.pose_landmarks:
+                        continue
+
+                    landmarks = results.pose_landmarks.landmark
+
+                    row = []
+                    for lm in landmarks:
+                        row.extend([lm.x, lm.y, lm.z, lm.visibility])
+
+                    row = [label, split, video_key, video_mtime] + row
+                    data_list.append(row)
+                    frame_count += 1
+
+                cap.release()
+                print(f"Processed {video_key} -> collected frames: {frame_count}")
 
 if data_list:
     columns = metadata_columns.copy()
