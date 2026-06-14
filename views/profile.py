@@ -27,31 +27,40 @@ def show():
         else:
             display_image = user_data["profile_picture"]
 
-        col_avatar, col_summary = st.columns([1, 3])
-
+        col_avatar, col_summary = st.columns([0.7, 2.3])
         with col_avatar:
-            st.image(display_image, width = 120)
-            st.markdown(f"**{display_name}**")
-            st.caption(f"@{current_user}")
-            st.write("")
-            if st.button("Log out", type = "secondary"):
-                st.session_state["logged_in"] = False
-                st.session_state["username"] = None
-                st.rerun()
-
+            with st.container(border = True):
+                st.image(display_image, width = 120)
+                st.markdown(f"**{display_name}**")
+                st.caption(f"@{current_user}")
+                st.write("")
+                if st.button("Log out", type = "secondary"):
+                    st.session_state["logged_in"] = False
+                    st.session_state["username"] = None
+                    st.rerun()
         with col_summary:
-            st.markdown("### Profile overview")
-            st.caption("Your current training setup and saved preferences.")
-            summary_col1, summary_col2, summary_col3 = st.columns(3)
-            with summary_col1:
-                st.caption("GOAL")
-                st.markdown(f"**{profile_goal}**")
-            with summary_col2:
-                st.caption("LEVEL")
-                st.markdown(f"**{profile_level}**")
-            with summary_col3:
-                st.caption("DAILY TARGET")
-                st.markdown(f"**{daily_target} reps**")
+            with st.container(border = True):
+                st.markdown("### Profile overview")
+                st.caption("Your current training setup and saved preferences.")
+                summary_col1, summary_col2, summary_col3 = st.columns(3)
+                with summary_col1:
+                    st.markdown(
+                        "<span style='color: #14B8A6; font-weight: 800;'>GOAL</span>",
+                        unsafe_allow_html=True
+                    )
+                    st.markdown(f"**{profile_goal}**")
+                with summary_col2:
+                    st.markdown(
+                        "<span style='color: #14B8A6; font-weight: 800;'>LEVEL</span>",
+                        unsafe_allow_html=True
+                    )
+                    st.markdown(f"**{profile_level}**")
+                with summary_col3:
+                    st.markdown(
+                        "<span style='color: #14B8A6; font-weight: 800;'>DAILY TARGET</span>",
+                        unsafe_allow_html=True
+                    )
+                    st.markdown(f"**{daily_target} reps**")
 
         st.write("---")
 
@@ -101,23 +110,44 @@ def show():
                                 cursor.execute("update users set password = ? where username = ?", (hashed_new, current_user))
                                 conn.commit()
                                 conn.close()
-                                st.caption("Password updated successfully.")
+                                st.markdown(
+                                    "<span style='color: #14B8A6; font-weight: 700;'>Password updated successfully.</span>",
+                                    unsafe_allow_html=True
+                                )
                             else:
                                 st.error("Incorrect current password.")
 
             st.write("")
 
             if st.button("Save Changes", type = "secondary", use_container_width = True):
-                final_avatar_string = user_data["profile_picture"]
-                if reset_to_default:
-                    final_avatar_string = "default"
-                elif uploaded_file is not None:
-                    file_bytes = uploaded_file.read()
-                    encoded_base64 = base64.b64encode(file_bytes).decode("utf-8")
-                    final_avatar_string = f"data:image/png;base64,{encoded_base64}"
+                try:
+                    final_avatar_string = user_data["profile_picture"]
+                    if reset_to_default:
+                        final_avatar_string = "default"
+                    elif uploaded_file is not None:
+                        file_bytes = uploaded_file.read()
+                        encoded_base64 = base64.b64encode(file_bytes).decode("utf-8")
+                        final_avatar_string = f"data:image/png;base64,{encoded_base64}"
 
-                database.update_user_profile(current_user, new_name, new_age, new_gender, final_avatar_string, new_goal, new_level, new_target)
-                st.rerun() 
+                    database.update_user_profile(current_user, new_name, new_age, new_gender, final_avatar_string, new_goal, new_level, new_target)
+                    st.session_state["profile_save_notice"] = "Profile changes saved successfully."
+                    st.rerun()
+                except Exception:
+                    st.session_state["profile_save_error"] = "Could not save profile changes. Please try again."
+                    st.rerun()
+            if "profile_save_notice" in st.session_state:
+                st.markdown(
+                    f"<span style='color: #14B8A6; font-weight: 700;'>{st.session_state['profile_save_notice']}</span>",
+                    unsafe_allow_html=True
+                )
+                del st.session_state["profile_save_notice"]
+
+            if "profile_save_error" in st.session_state:
+                st.markdown(
+                    f"<span style='color: #B91C1C; font-weight: 700;'>{st.session_state['profile_save_error']}</span>",
+                    unsafe_allow_html=True
+                )
+                del st.session_state["profile_save_error"]
 
     else:
         st.markdown("### Access your training profile")

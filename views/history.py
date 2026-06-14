@@ -48,17 +48,20 @@ def show():
         st.write("")
         auth_col1, auth_col2, auth_col3 = st.columns(3)
         with auth_col1:
-            st.caption("PROFILE")
-            st.markdown("**Sign in first**")
-            st.write("Open the Profile page and sign in to access your saved workout sessions.")
+            with st.container(border = True):
+                st.markdown("<span style='color: #14B8A6; font-weight: 800;'>PROFILE</span>", unsafe_allow_html = True)
+                st.markdown("**Sign in first**")
+                st.write("Open the Profile page and sign in to access your saved workout sessions.")
         with auth_col2:
-            st.caption("HISTORY")
-            st.markdown("**Saved sessions**")
-            st.write("Completed workouts will appear here once they are connected to your account.")
+            with st.container(border = True):
+                st.markdown("<span style='color: #14B8A6; font-weight: 800;'>HISTORY</span>", unsafe_allow_html = True)
+                st.markdown("**Saved sessions**")
+                st.write("Completed workouts will appear here once they are connected to your account.")
         with auth_col3:
-            st.caption("PROGRESS")
-            st.markdown("**Track consistency**")
-            st.write("Your training days, repetitions, and session feedback will be available after login.")
+            with st.container(border = True):
+                st.markdown("<span style='color: #14B8A6; font-weight: 800;'>PROGRESS</span>", unsafe_allow_html = True)
+                st.markdown("**Track consistency**")
+                st.write("Your training days, repetitions, and session feedback will be available after login.")
         return
 
     current_user = st.session_state["username"]
@@ -113,14 +116,26 @@ def show():
         st.write("")
         empty_col1, empty_col2, empty_col3 = st.columns(3)
         with empty_col1:
-            st.caption("NEXT STEP")
-            st.markdown("**Start a workout**")
-            st.write("Open the Exercises page and complete a session to create your first history entry.")
+            with st.container(border=True):
+                st.markdown(
+                    "<span style='color: #14B8A6; font-weight: 800;'>NEXT STEP</span>",
+                    unsafe_allow_html=True
+                )
+                st.markdown("**Start a workout**")
+                st.write("Open the Exercises page and complete a session to create your first history entry.")
         with empty_col2:
-            st.caption("TIP")
-            st.markdown("**Check another date**")
-            st.write("Use the date selector above to review previous training days.")
+            with st.container(border=True):
+                st.markdown(
+                    "<span style='color: #14B8A6; font-weight: 800;'>TIP</span>",
+                    unsafe_allow_html=True
+                )
+                st.markdown("**Check another date**")
+                st.write("Use the date selector above to review previous training days.")
         with empty_col3:
-            st.caption("PROGRESS")
-            st.markdown("**Build consistency**")
-            st.write("Your completed sessions will appear here once workouts are saved.")
+            with st.container(border=True):
+                st.markdown(
+                    "<span style='color: #14B8A6; font-weight: 800;'>PROGRESS</span>",
+                    unsafe_allow_html=True
+                )
+                st.markdown("**Build consistency**")
+                st.write("Your completed sessions will appear here once workouts are saved.")

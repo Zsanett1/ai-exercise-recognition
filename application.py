@@ -14,7 +14,7 @@ st.markdown(
         [data-testid="stSidebarCollapseButton"] {display: none;}
     </style>
     """,
-    unsafe_allow_html=True,
+    unsafe_allow_html = True,
 )
 
 selected_page = option_menu(

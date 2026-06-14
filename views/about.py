@@ -21,25 +21,31 @@ def show():
 
     st.write("---")
 
-    st.markdown("### The problem")
-    problem_col1, problem_col2 = st.columns(2)
-
-    with problem_col1:
-        st.markdown("**Common barriers to gym training**")
-        st.markdown(
-            "- Lack of time for regular gym visits\n"
-            "- Distance from suitable training facilities\n"
-            "- Discomfort or anxiety in public workout environments"
-        )
-
-    with problem_col2:
-        st.markdown("**Challenges of training at home**")
-        st.markdown(
-            "- Limited feedback on exercise execution\n"
-            "- Uncertainty about correct movement form\n"
-            "- Difficulty staying consistent without structure\n"
-            "- Lack of simple progress tracking"
-        )
+    problem_img_col, problem_content_col = st.columns([1, 1.5])
+    with problem_img_col:
+        st.image("assets/home_tracking.png", use_container_width=True)
+    with problem_content_col:
+        st.markdown("### The problem")
+        barrier_col, challenge_col = st.columns(2)
+        with barrier_col:
+            st.markdown("**Common barriers to gym training**")
+            st.markdown(
+                """
+        - Lack of time for regular gym visits
+        - Distance from suitable training facilities
+        - Discomfort or anxiety in public workout environments
+                """
+            )
+        with challenge_col:
+            st.markdown("**Challenges of training at home**")
+            st.markdown(
+                """
+        - Limited feedback on exercise execution
+        - Uncertainty about correct movement form
+        - Difficulty staying consistent without structure
+        - Lack of simple progress tracking
+                """
+            )
 
     st.write("---")
 
@@ -60,17 +66,20 @@ def show():
     st.markdown("### Who can benefit from it")
     audience_col1, audience_col2, audience_col3 = st.columns(3)
     with audience_col1:
-        st.caption("BEGINNERS")
-        st.markdown("**People starting out**")
-        st.write("Users who want a simple and structured way to begin exercising at home.")
+        with st.container(border = True):
+            st.markdown("<span style='color: #14B8A6; font-weight: 800;'>BEGINNERS</span>", unsafe_allow_html = True)
+            st.markdown("**People starting out**")
+            st.write("Users who want a simple and structured way to begin exercising at home.")
     with audience_col2:
-        st.caption("BUSY USERS")
-        st.markdown("**People with limited time**")
-        st.write("Users who need a flexible workout option without travelling to a gym.")
+        with st.container(border = True):
+            st.markdown("<span style='color: #14B8A6; font-weight: 800;'>BUSY USERS</span>", unsafe_allow_html = True)
+            st.markdown("**People with limited time**")
+            st.write("Users who need a flexible workout option without travelling to a gym.")
     with audience_col3:
-        st.caption("HOME TRAINING")
-        st.markdown("**People preferring privacy**")
-        st.write("Users who feel more comfortable exercising in their own environment.")
+        with st.container(border = True):
+            st.markdown("<span style='color: #14B8A6; font-weight: 800;'>HOME TRAINING</span>", unsafe_allow_html = True)
+            st.markdown("**People preferring privacy**")
+            st.write("Users who feel more comfortable exercising in their own environment.")
 
     st.write("---")
 

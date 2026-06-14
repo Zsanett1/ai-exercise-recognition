@@ -111,17 +111,20 @@ def show():
     
     intro_col1, intro_col2, intro_col3 = st.columns(3)
     with intro_col1:
-        st.caption("LIBRARY")
-        st.markdown("**Choose movement**")
-        st.write("Browse exercises by muscle group and review the correct execution.")
+        with st.container(border = True):
+            st.markdown("<span style='color: #14B8A6; font-weight: 800;'>LIBRARY</span>", unsafe_allow_html = True)
+            st.markdown("**Choose movement**")
+            st.write("Browse exercises by muscle group and review the correct execution.")
     with intro_col2:
-        st.caption("TRACKING")
-        st.markdown("**Prepare session**")
-        st.write("Select an exercise before starting real-time AI analysis.")
+        with st.container(border = True):
+            st.markdown("<span style='color: #14B8A6; font-weight: 800;'>TRACKING</span>", unsafe_allow_html = True)
+            st.markdown("**Prepare session**")
+            st.write("Select an exercise before starting real-time AI analysis.")
     with intro_col3:
-        st.caption("PROGRESS")
-        st.markdown("**Save results**")
-        st.write("Logged-in users will be able to connect completed sessions to history.")
+        with st.container(border = True):
+            st.markdown("<span style='color: #14B8A6; font-weight: 800;'>PROGRESS</span>", unsafe_allow_html = True)
+            st.markdown("**Save results**")
+            st.write("Logged-in users will be able to connect completed sessions to history.")
     st.write("---")
     
     if "selected_exercise" not in st.session_state:
