@@ -18,8 +18,10 @@ videos_path = base_dir / "videos"
 
 hidden_classes = {"idle"}
 min_confidence_to_display = 0.70
+min_confidence_to_consider = 0.40
 required_consecutive_frames = 3
 required_non_exercise_frames = 3
+top_prediction_count = 5
 
 
 def load_class_names():
@@ -50,6 +52,7 @@ rule_manager = build_rule_manager(
     min_confidence_to_display=min_confidence_to_display,
     required_consecutive_frames=required_consecutive_frames,
     required_non_exercise_frames=required_non_exercise_frames,
+    min_confidence_to_consider=min_confidence_to_consider,
 )
 
 mp_pose = mp.solutions.pose
@@ -68,6 +71,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
         ret, frame = cap.read()
         if not ret:
             break
+        candidates = []
 
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         image.flags.writeable = False
@@ -84,18 +88,20 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
 
                 X = np.array([row])
                 prediction = model.predict(X, verbose=0)
-                predicted_class = int(np.argmax(prediction))
-                label = class_names[predicted_class]
-                confidence = float(prediction[0][predicted_class])
-                frame_decision = rule_manager.process_frame(label, confidence, landmarks)
+                candidate_indexes = np.argsort(prediction[0])[-top_prediction_count:][::-1]
+                candidates = [
+                    (class_names[int(index)], float(prediction[0][int(index)]))
+                    for index in candidate_indexes
+                ]
+                frame_decision = rule_manager.process_candidates(candidates, landmarks)
             else:
                 frame_decision = rule_manager.process_frame(None, 0.0, None)
 
-            if frame_decision.active_label:
+            if frame_decision.display_label:
                 cv2.rectangle(image, (0, 0), (250, 60), (245, 117, 16), -1)
                 cv2.putText(
                     image,
-                    f"Action: {frame_decision.active_label.upper()}",
+                    f"Action: {frame_decision.display_label.upper()}",
                     (15, 25),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.7,
@@ -105,7 +111,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
                 )
                 cv2.putText(
                     image,
-                    f"Confidence: {frame_decision.active_confidence:.2f}",
+                    f"Confidence: {frame_decision.display_confidence:.2f}",
                     (15, 50),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.7,
@@ -125,6 +131,30 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
                 2,
                 cv2.LINE_AA,
             )
+
+            if candidates:
+                cv2.rectangle(image, (0, 130), (330, 285), (30, 30, 30), -1)
+                cv2.putText(
+                    image,
+                    "Top predictions",
+                    (15, 155),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.55,
+                    (255, 255, 255),
+                    1,
+                    cv2.LINE_AA,
+                )
+                for index, (candidate_label, candidate_confidence) in enumerate(candidates, start=1):
+                    cv2.putText(
+                        image,
+                        f"{index}. {candidate_label}: {candidate_confidence:.2f}",
+                        (15, 155 + index * 24),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5,
+                        (230, 230, 230),
+                        1,
+                        cv2.LINE_AA,
+                    )
 
         except Exception as e:
             print(f"Error : {e}")
