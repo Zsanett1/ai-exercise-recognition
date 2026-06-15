@@ -34,6 +34,11 @@ def init_db():
                     date text not null
                     )""")
     
+    cursor.execute("pragma table_info(workouts)")
+    workout_columns = [column[1] for column in cursor.fetchall()]
+    if "saved_at" not in workout_columns:
+        cursor.execute("alter table workouts add column saved_at text")
+    
     cursor.execute("""
                    create table if not exists exercises (
                    id integer primary key autoincrement,
@@ -43,8 +48,14 @@ def init_db():
                    focus text,
                    image_path text,
                    model_label text,
-                   is_trackable integer default 0
+                   is_trackable integer default 0,
+                   level text
                    )""")
+    
+    cursor.execute("pragma table_info(exercises)")
+    exercise_columns = [column[1] for column in cursor.fetchall()]
+    if "level" not in exercise_columns:
+        cursor.execute("alter table exercises add column level text default 'Beginner'")
     
     cursor.execute("""
                    create table if not exists exercise_steps (
@@ -123,13 +134,13 @@ def update_user_profile(username, full_name, age, gender, profile_picture, fitne
     conn.commit()
     conn.close()
 
-def insert_workout(username, exercise_name, total_reps, correct_reps, feedback, screenshot, date_str):
+def insert_workout(username, exercise_name, total_reps, correct_reps, feedback, screenshot, date_str, saved_at):
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
     cursor.execute("""
-                   insert into workouts (username, exercise_name, total_reps, correct_reps, feedback, screenshot, date)
-                   values (?, ?, ?, ?, ?, ?, ?)
-                   """, (username, exercise_name, total_reps, correct_reps, feedback, screenshot, date_str))
+                   insert into workouts (username, exercise_name, total_reps, correct_reps, feedback, screenshot, date, saved_at)
+                   values (?, ?, ?, ?, ?, ?, ?, ?)
+                   """, (username, exercise_name, total_reps, correct_reps, feedback, screenshot, date_str, saved_at))
     conn.commit()
     conn.close()
 
@@ -137,8 +148,8 @@ def get_workouts_by_date(username, date_str):
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
     cursor.execute("""
-                   select exercise_name, total_reps, correct_reps, feedback, screenshot
-                   from workouts where username = ? and date = ?
+                   select exercise_name, total_reps, correct_reps, feedback, screenshot, saved_at
+                   from workouts where username = ? and date = ? order by saved_at desc, id desc
                    """, (username, date_str))
     rows = cursor.fetchall()
     conn.close()
@@ -149,7 +160,8 @@ def get_workouts_by_date(username, date_str):
             "total_reps": row[1],
             "correct_reps": row[2],
             "feedback": row[3],
-            "screenshot": row[4]
+            "screenshot": row[4],
+            "saved_at": row[5] or "",
         })
     return workouts_list
 
@@ -199,7 +211,8 @@ def seed_exercises():
             "focus": "Chest, shoulders, triceps",
             "image_path": "assets/push_up.jpg",
             "model_label": "push_up",
-            "is_trackable": 0,
+            "is_trackable": 1,
+            "level": "Advanced",
             "steps": [
                 "Start in a high plank position with your hands under your shoulders.",
                 "Keep your body in a straight line from head to heels.",
@@ -214,7 +227,8 @@ def seed_exercises():
             "focus": "Shoulders, upper chest, triceps",
             "image_path": "assets/shoulder_press.jpg",
             "model_label": "shoulder_press",
-            "is_trackable": 0,
+            "is_trackable": 1,
+            "level": "Intermediate",
             "steps": [
                 "Stand tall and hold the weights at shoulder height.",
                 "Brace your core and avoid arching your lower back.",
@@ -229,7 +243,8 @@ def seed_exercises():
             "focus": "Biceps and forearms",
             "image_path": "assets/bicep_curl.jpg",
             "model_label": "bicep_curl",
-            "is_trackable": 0,
+            "is_trackable": 1,
+            "level": "Beginner",
             "steps": [
                 "Stand tall with your elbows close to your torso.",
                 "Curl the weight upward without swinging your body.",
@@ -244,7 +259,8 @@ def seed_exercises():
             "focus": "Triceps",
             "image_path": "assets/overhead_extension.jpg",
             "model_label": "overhead_extension",
-            "is_trackable": 0,
+            "is_trackable": 1,
+            "level": "Intermediate",
             "steps": [
                 "Hold the weight overhead with both hands.",
                 "Keep your elbows pointing forward and close to your head.",
@@ -260,6 +276,7 @@ def seed_exercises():
             "image_path": "assets/squat.jpg",
             "model_label": "squat",
             "is_trackable": 1,
+            "level": "Intermediate",
             "steps": [
                 "Stand with your feet about shoulder-width apart.",
                 "Push your hips back and bend your knees.",
@@ -274,7 +291,8 @@ def seed_exercises():
             "focus": "Calves",
             "image_path": "assets/calf_raises.jpg",
             "model_label": "calf_raises",
-            "is_trackable": 0,
+            "level": "Beginner",
+            "is_trackable": 1,
             "steps": [
                 "Stand tall with your feet hip-width apart.",
                 "Rise onto the balls of your feet.",
@@ -289,7 +307,8 @@ def seed_exercises():
             "focus": "Upper abdominals",
             "image_path": "assets/crunch.jpg",
             "model_label": "crunch",
-            "is_trackable": 0,
+            "level": "Beginner",
+            "is_trackable": 1,
             "steps": [
                 "Lie on your back with your knees bent and feet flat on the floor.",
                 "Place your hands lightly behind your head or across your chest.",
@@ -304,7 +323,8 @@ def seed_exercises():
             "focus": "Core, shoulders, glutes",
             "image_path": "assets/plank.jpg",
             "model_label": "plank",
-            "is_trackable": 0,
+            "is_trackable": 1,
+            "level": "Beginner",
             "steps": [
                 "Place your elbows directly under your shoulders.",
                 "Keep your body in a straight line from head to heels.",
@@ -319,7 +339,8 @@ def seed_exercises():
             "focus": "Lower back, glutes, posterior chain",
             "image_path": "assets/superman.jpg",
             "model_label": "superman",
-            "is_trackable": 0,
+            "is_trackable": 1,
+            "level": "Beginner",
             "steps": [
                 "Lie face down with arms extended in front of you.",
                 "Lift your arms, chest, and legs slightly from the floor.",
@@ -333,11 +354,11 @@ def seed_exercises():
     for exercise in exercises:
         cursor.execute("""
                 insert or ignore into exercises
-                (name, category, equipment, focus, image_path, model_label, is_trackable)
-                values (?, ?, ?, ?, ?, ?, ?)
+                (name, category, equipment, focus, image_path, model_label, is_trackable, level)
+                values (?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     exercise["name"], exercise["category"], exercise["equipment"], exercise["focus"], 
-                    exercise["image_path"], exercise["model_label"], exercise["is_trackable"],
+                    exercise["image_path"], exercise["model_label"], exercise["is_trackable"], exercise["level"],
                 ))
         cursor.execute("select id from exercises where name = ?", (exercise["name"],))
         exercise_id = cursor.fetchone()[0]
@@ -397,7 +418,7 @@ def get_exercises_by_category(category):
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
     cursor.execute("""
-                   select id, name, category, equipment, focus, image_path, model_label, is_trackable
+                   select id, name, category, equipment, focus, image_path, model_label, is_trackable, level
                    from exercises where category = ? order by name""", (category,))
     exercise_rows = cursor.fetchall()
     exercises = []
@@ -416,7 +437,23 @@ def get_exercises_by_category(category):
             "image_path": row[5],
             "model_label": row[6],
             "is_trackable": bool(row[7]),
+            "level": row[8] or "Beginner",
             "steps": [step[0] for step in step_rows],
         })
     conn.close()
     return exercises
+
+def get_workout_progress(username):
+    conn = sqlite3.connect(db_file)
+    cursor = conn.cursor()
+    cursor.execute("""
+                   select date, sum(total_reps), sum(correct_reps) from workouts
+                   where username = ? group by date order by date""", (username, ))
+    rows = cursor.fetchall()
+    conn.close()
+    return[
+        {"date": row[0],
+         "total_reps": row[1] or 0,
+         "correct_reps": row[2] or 0,}
+         for row in rows
+    ]

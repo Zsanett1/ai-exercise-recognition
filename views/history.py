@@ -1,11 +1,18 @@
 import streamlit as st
+import pandas as pd
+import altair as alt
 import database
 from datetime import datetime
+import json
 
 @st.dialog("Exercise Analysis", width="large")
 def show_workout_details_popup(workout_data):
     st.write(f"**{workout_data['exercise_name']}**")
-    st.caption("Session performance and saved feedback.")
+    if workout_data["saved_at"]:
+        saved_time = datetime.strptime(workout_data["saved_at"], "%Y-%m-%d %H:%M:%S").strftime("%B %d, %Y at %H:%M")
+        st.caption(f"Saved on {saved_time}")
+    else:
+        st.caption("Session performance and saved feedback.")
     st.write("---")
     
     col_popup_text, col_popup_pic = st.columns([1.2, 1])
@@ -21,14 +28,28 @@ def show_workout_details_popup(workout_data):
         st.write("---")
         st.markdown("### AI Coach Feedback")
         if workout_data["feedback"]:
-            st.write(workout_data["feedback"])
+            for feedback_line in workout_data["feedback"].splitlines():
+                st.write(feedback_line)
         else:
             st.caption("No detailed feedback was saved for this session.")
             
     with col_popup_pic:
         st.markdown("### **Captured Form**")
+        screenshots = []
         if workout_data['screenshot'] and workout_data['screenshot'] != "default":
-            st.image(workout_data['screenshot'], caption="Saved session snapshot", use_container_width=True)
+            try:
+                screenshots = json.loads(workout_data["screenshot"])
+            except json.JSONDecodeError:
+                screenshots = [{
+                    "rep": "", "feedback": "Saved session snapshot", "image_path": workout_data["screenshot"],
+                }]
+        if screenshots:
+            for screenshot in screenshots:
+                caption = screenshot.get("feedback", "Saved form snapshot.")
+                rep = screenshot.get("rep")
+                if rep:
+                    caption = f"Rep {rep}: {caption}"
+                st.image(screenshot["image_path"], caption = caption, use_column_width = True,)
         else:
             st.caption("No form snapshot was saved for this session.")
 
@@ -70,46 +91,74 @@ def show():
     st.caption("Review your completed sessions and daily performance.")
     st.write("---")
 
+    progress_data = database.get_workout_progress(current_user)
+    if progress_data:
+        progress_df = pd.DataFrame(progress_data)
+        progress_df["date"] = pd.to_datetime(progress_df["date"])
+        progress_df = progress_df.set_index("date").asfreq("D", fill_value = 0).reset_index()
+        progress_df["day"] = progress_df["date"].dt.strftime("%b %d")
+        chart_df = progress_df.melt(
+            id_vars = ["date", "day"], value_vars = ["total_reps", "correct_reps"], var_name = "type", value_name = "reps"
+        )
+        max_reps = int(chart_df["reps"].max()) if not chart_df.empty else 10
+        y_max = max(10, ((max_reps // 10) + 1) * 10)
+        st.markdown(
+            "<span style='color: #14B8A6; font-weight: 800;'>TRAINING PROGRESS</span>"
+            " <span style='color: #64748B;'>- your saved workout repetitions by day</span>",
+            unsafe_allow_html=True
+        )
+        chart = (
+            alt.Chart(chart_df).mark_line(point = True).encode(
+                x = alt.X("day:N", title = "Day", sort = list(progress_df["day"])),
+                y = alt.Y("reps:Q", title = "Repetitions", scale = alt.Scale(domain = [0, y_max]), axis = alt.Axis(values = list(range(0, y_max + 1, 10)))),
+                color = alt.Color("type:N", title = "", scale = alt.Scale(domain = ["total_reps", "correct_reps"], range = ["#60A5FA", "#14B8A6"]))
+            ).properties(height = 280)
+        )
+        st.altair_chart(chart, use_container_width = True)
+    st.write("---")
+    st.markdown(
+        "<span style='color: #14B8A6; font-weight: 800;'>DATE FILTER</span>"
+        " <span style='color: #64748B; font-weight: 500;'>- select a day to review its saved workouts</span>",
+        unsafe_allow_html=True
+    )
     date_col, _ = st.columns([1, 3])
     with date_col:
         selected_date = st.date_input("Training date", value=datetime.today())
-
     date_str = selected_date.strftime("%Y-%m-%d")
-
     st.markdown(f"### Sessions on {selected_date.strftime('%B %d, %Y')}")
-
     daily_workouts = database.get_workouts_by_date(current_user, date_str)
 
     if len(daily_workouts) > 0:
         total_reps_day = sum(w["total_reps"] for w in daily_workouts)
         correct_reps_day = sum(w["correct_reps"] for w in daily_workouts)
         accuracy = int((correct_reps_day / total_reps_day) * 100) if total_reps_day > 0 else 100
-        st.markdown("### Daily summary")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric(label="Total Exercises", value=len(daily_workouts))
-        with col2:
-            st.metric(label="Total Repetitions", value=f"{total_reps_day} reps")
-        with col3:
-            st.metric(label="Daily AI Accuracy", value=f"{accuracy}%")
-
-        st.write("---")
-
-        session_left, session_center, session_right = st.columns([0.5, 3, 0.5])
-        with session_center:  
-            st.markdown("### Session details")
-            st.caption("Select a session to view its detailed analysis.")
-            for index, workout in enumerate(daily_workouts):
-                col_name, col_stats, col_btn = st.columns([1.5, 1.5, 1])
-                with col_name:
-                    st.markdown(f"**{workout['exercise_name']}**")
-                with col_stats:
-                    st.write(f"Score: **{workout['correct_reps']}/{workout['total_reps']} reps**")
-                with col_btn:
-                    if st.button("View Details", key=f"btn_{index}", use_container_width=True):
-                        show_workout_details_popup(workout)
-                st.write("---")
-
+        summary_col, session_col = st.columns([1, 2])
+        with summary_col:
+            with st.container(border = True):
+                st.markdown("<span style='color: #14B8A6; font-weight: 800;'>DAILY SUMMARY</span>", unsafe_allow_html=True)
+                st.caption("Total Exercises")
+                st.markdown(f"### {len(daily_workouts)}")
+                st.caption("Total Repetitions")
+                st.markdown(f"### {total_reps_day} reps")
+                st.caption("Daily AI Accuracy")
+                st.markdown(f"### {accuracy}%")
+        with session_col:
+            with st.container(border = True):
+                st.markdown("<span style='color: #14B8A6; font-weight: 800;'>SESSION DETAILS</span>", unsafe_allow_html=True)
+                st.caption("Select a session to view its detailed analysis.")
+                for index, workout in enumerate(daily_workouts):
+                    col_name, col_stats, col_btn = st.columns([1.5, 1.2, 1])
+                    with col_name:
+                        st.markdown(f"**{workout['exercise_name']}**")
+                        if workout["saved_at"]:
+                            saved_time = datetime.strptime(workout["saved_at"], "%Y-%m-%d %H:%M:%S").strftime("%H:%M")
+                            st.caption(f"Saved at {saved_time}")
+                    with col_stats:
+                        st.write(f"Score: **{workout['correct_reps']}/{workout['total_reps']} reps**")
+                    with col_btn:
+                        if st.button("View Details", key = f"btn_{index}", use_container_width = True):
+                            show_workout_details_popup(workout)
+                    st.write("---")
     else:
         st.markdown("### No sessions recorded")
         st.caption("There are no workouts saved for the selected date.")
