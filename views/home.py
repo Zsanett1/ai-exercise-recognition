@@ -1,6 +1,24 @@
 import streamlit as st
 import database
 
+GOAL_GUIDANCE = {
+    "Stay Fit": {
+        "title": "Maintain a balanced routine",
+        "text": "Focus on regular movement, a mix of strength and core exercises, and consistent daily activity."
+    },
+    "Lose Weight": {
+        "title": "Support a calorie deficit",
+        "text": "Combine regular workouts with a sustainable calorie deficit, more daily steps, and consistent training habits."
+    },
+    "Build Muscle": {
+        "title": "Prioritize strength and recovery",
+        "text": "Aim for progressive strength training, enough protein, and 3-4 focused workout sessions per week."
+    },
+    "Increase Endurance": {
+        "title": "Build consistency over time",
+        "text": "Use higher-repetition sessions, shorter rest periods, and regular activity to improve stamina gradually."
+    },
+}
 
 def show():
     if "logged_in" not in st.session_state:
@@ -65,14 +83,29 @@ def show():
         st.markdown(f"### Welcome back, {display_name}")
         st.write("Your workout space is ready. Continue tracking your daily goal or start a new exercise session.")
         st.write("")
-        st.markdown("### Your training overview")
-        metric_col1, metric_col2, metric_col3 = st.columns(3)
-        with metric_col1:
-            st.metric(label="Completed Workouts", value=f"{total_workouts}")
-        with metric_col2:
-            st.metric(label="Total Reps", value=f"{total_reps}")
-        with metric_col3:
-            st.metric(label="Last Session", value=last_active)
+        fitness_goal = user_data["fitness_goal"]
+        goal_guidance = GOAL_GUIDANCE.get(fitness_goal, GOAL_GUIDANCE["Stay Fit"])
+        overview_col, focus_col = st.columns([2, 1])
+        with overview_col:
+            with st.container(border = True):
+                st.markdown("<span style='color: #14B8A6; font-weight: 800;'>TRAINING OVERVIEW</span>", unsafe_allow_html=True)
+                st.write("")
+                metric_col1, metric_col2, metric_col3 = st.columns(3)
+                with metric_col1:
+                    st.metric(label="Completed Workouts", value=f"{total_workouts}")
+                with metric_col2:
+                    st.metric(label="Total Reps", value=f"{total_reps}")
+                with metric_col3:
+                    st.metric(label="Last Session", value=last_active)
+                st.write("")
+                st.caption("Your saved sessions and repetitions are updated from completed AI tracking workouts.")
+        with focus_col:
+            with st.container(border = True):
+                st.markdown("<span style='color: #14B8A6; font-weight: 800;'>TRAINING FOCUS</span>", unsafe_allow_html=True)
+                st.write("")
+                st.markdown(f"**{fitness_goal}**")
+                st.caption(goal_guidance["title"])
+                st.write(goal_guidance["text"])
 
         st.write("")
         st.markdown("### Today's goal")
