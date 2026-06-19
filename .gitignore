@@ -215,3 +215,4 @@ demo_videos/
 demo_images/
 fitness_app.db
 assets/session_screenshots/
+.streamlit/secrets.toml
