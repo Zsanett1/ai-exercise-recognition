@@ -5,7 +5,17 @@ import database
 
 database.init_db()
 
-st.set_page_config(page_title="AI Home Personal Trainer", layout="wide")
+verification_token = st.query_params.get("verify_token")
+
+if verification_token:
+    verification_success = database.verify_email_token(verification_token)
+    if verification_success:
+        st.caption("Email address verified successfully. You can now sign in.")
+    else:
+        st.error("Invalid or expired verification link.")
+    st.query_params.clear()
+
+st.set_page_config(page_title="AI Home Personal Assistant", layout="wide")
 
 st.markdown(
     """
@@ -74,7 +84,7 @@ st.write("---")
 col_foot1, col_foot2 = st.columns(2)
 
 with col_foot1:
-    st.caption("(c) 2026 AI Home Personal Trainer.")
+    st.caption("(c) 2026 AI Home Personal Assistant.")
 with col_foot2:
     st.markdown(
         "<div style='text-align: right; color: gray; font-size: 0.8rem;'>"

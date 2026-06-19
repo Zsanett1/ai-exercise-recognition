@@ -5,6 +5,19 @@ import database
 from datetime import datetime
 import json
 
+def format_duration(duration_seconds):
+    if not duration_seconds:
+        return "Not recorded"
+    minutes = duration_seconds // 60
+    seconds = duration_seconds % 60
+    return f"{minutes:02d}:{seconds:02d}"
+
+def estimate_calories(duration_seconds, weight_kg, met_value):
+    if not duration_seconds or not weight_kg or not met_value:
+        return None
+    duration_hours = duration_seconds / 3600
+    return round(float(met_value) * float(weight_kg) * duration_hours)
+
 @st.dialog("Exercise Analysis", width="large")
 def show_workout_details_popup(workout_data):
     st.write(f"**{workout_data['exercise_name']}**")
@@ -49,7 +62,7 @@ def show_workout_details_popup(workout_data):
                 rep = screenshot.get("rep")
                 if rep:
                     caption = f"Rep {rep}: {caption}"
-                st.image(screenshot["image_path"], caption = caption, use_column_width = True,)
+                st.image(screenshot["image_path"], caption = caption, use_container_width = True,)
         else:
             st.caption("No form snapshot was saved for this session.")
 
@@ -86,6 +99,8 @@ def show():
         return
 
     current_user = st.session_state["username"]
+    user_profile = database.get_user_profile(current_user)
+    user_weight = user_profile["weight_kg"] if user_profile else 0
 
     st.title("Workout History")
     st.caption("Review your completed sessions and daily performance.")
@@ -115,6 +130,27 @@ def show():
             ).properties(height = 280)
         )
         st.altair_chart(chart, use_container_width = True)
+    else:
+        st.markdown(
+            "<span style='color: #14B8A6; font-weight: 800;'>TRAINING PROGRESS</span>"
+            " <span style='color: #64748B;'>- your saved workout repetitions by day</span>",
+            unsafe_allow_html=True
+        )
+        with st.container(border = True):
+            st.markdown("### No progress data yet")
+            st.caption("Complete your first tracked workout session to start building your progress chart.")
+            st.write("")
+            empty_col1, empty_col2, empty_col3 = st.columns(3)
+            with empty_col1:
+                st.markdown("**1. Choose an exercise**")
+                st.caption("Open the Exercises page and select a trackable movement.")
+            with empty_col2:
+                st.markdown("**2. Start AI tracking**")
+                st.caption("Use the camera-based tracking flow to record repetitions.")
+            with empty_col3:
+                st.markdown("**3. Save your result**")
+                st.caption("Saved sessions will appear here with progress and feedback.")
+        return
     st.write("---")
     st.markdown(
         "<span style='color: #14B8A6; font-weight: 800;'>DATE FILTER</span>"
@@ -132,10 +168,21 @@ def show():
         total_reps_day = sum(w["total_reps"] for w in daily_workouts)
         correct_reps_day = sum(w["correct_reps"] for w in daily_workouts)
         accuracy = int((correct_reps_day / total_reps_day) * 100) if total_reps_day > 0 else 100
+        total_calories_day = 0
+        for workout in daily_workouts:
+            estimated_calories = estimate_calories(
+                workout["duration_seconds"],
+                user_weight,
+                workout["met_value"]
+            )
+            if estimated_calories:
+                total_calories_day += estimated_calories
         summary_col, session_col = st.columns([1, 2])
         with summary_col:
             with st.container(border = True):
                 st.markdown("<span style='color: #14B8A6; font-weight: 800;'>DAILY SUMMARY</span>", unsafe_allow_html=True)
+                st.caption("Estimated Calories")
+                st.markdown(f"### {total_calories_day} kcal")
                 st.caption("Total Exercises")
                 st.markdown(f"### {len(daily_workouts)}")
                 st.caption("Total Repetitions")
@@ -154,7 +201,15 @@ def show():
                             saved_time = datetime.strptime(workout["saved_at"], "%Y-%m-%d %H:%M:%S").strftime("%H:%M")
                             st.caption(f"Saved at {saved_time}")
                     with col_stats:
+                        estimated_calories = estimate_calories(workout["duration_seconds"], user_weight, workout["met_value"])
                         st.write(f"Score: **{workout['correct_reps']}/{workout['total_reps']} reps**")
+                        st.caption(f"Duration: {format_duration(workout['duration_seconds'])}")
+                        if estimated_calories:
+                            st.caption(f"Calories burned: {estimated_calories} kcal")
+                        elif not user_weight:
+                            st.caption("Add your weight in Profile to see the burned calories.")
+                        else:
+                            st.caption("Calories are not available.")
                     with col_btn:
                         if st.button("View Details", key = f"btn_{index}", use_container_width = True):
                             show_workout_details_popup(workout)

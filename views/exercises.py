@@ -114,7 +114,8 @@ def show_session_setup(is_logged_in):
                 st.session_state["tracking_finished"] = False
                 st.session_state["camera_was_playing"] = False
                 st.session_state["tracking_saved"] = False
-                reset_tracking_session()
+                st.session_state["tracking_started_at"] = datetime.now()
+                reset_tracking_session(target_label = selected_exercise["model_label"])
                 st.rerun()
 
 def sort_exercises_by_user_level(exercises, user_level):
@@ -211,17 +212,23 @@ def show_tracking_camera():
                 st.session_state["tracking_active"] = False
                 st.session_state["camera_was_playing"] = False
                 st.session_state["tracking_saved"] = False
+                st.session_state["tracking_started_at"] = None
                 st.rerun()
         with close_col2:
             if st.button("Save to History", use_container_width = True):
                 current_user = st.session_state.get("username")
                 selected_exercise = st.session_state.get("selected_exercise")
                 summary = get_tracking_summary()
+                started_at = st.session_state.get("tracking_started_at")
+                duration_seconds = 0
+                if started_at:
+                    duration_seconds = int((datetime.now() - started_at).total_seconds())
                 if summary["total_reps"] <= 0:
                     st.caption("No repetitions were recorded, so the session will not be saved.")
                 elif st.session_state.get("tracking_saved", False):
                     st.caption("This session has already been saved.")
                 else:
+                    met_value = selected_exercise.get("met_value", 3.0)
                     database.insert_workout(
                         username = current_user,
                         exercise_name = selected_exercise["name"],
@@ -230,9 +237,12 @@ def show_tracking_camera():
                         feedback = format_rep_feedback(summary["rep_feedback_history"]),
                         screenshot = json.dumps(summary["error_screenshots"]) if summary["error_screenshots"] else "default",
                         date_str = date.today().strftime("%Y-%m-%d"),
-                        saved_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        saved_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        duration_seconds = duration_seconds,
+                        met_value = met_value
                     )
                     st.session_state["tracking_saved"] = True
+                    st.session_state["tracking_started_at"] = None
                     st.caption("Session saved to history.")
 
 def show():
