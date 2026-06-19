@@ -8,6 +8,7 @@ from src.tracking.exercise_session import ExerciseTrackingSession
 
 mp_pose = mp.solutions.pose
 mp_drawing = mp.solutions.drawing_utils
+pending_error_frames = {}
 
 pose = mp_pose.Pose(min_detection_confidence = 0.5, min_tracking_confidence = 0.5,)
 
@@ -23,19 +24,21 @@ captured_feedback_codes = set()
 base_dir = Path(__file__).resolve().parent.parent.parent
 screenshot_dir = base_dir / "assets" / "session_screenshots"
 
-def reset_tracking_session():
+def reset_tracking_session(target_label = None):
     global tracking_session, last_display_label, last_display_confidence
-    global last_total_reps, last_correct_reps, display_label_until, captured_feedback_codes
+    global last_total_reps, last_correct_reps, display_label_until, captured_feedback_codes, pending_error_frames
 
-    tracking_session = ExerciseTrackingSession()
+    tracking_session = ExerciseTrackingSession(target_label = target_label)
     last_display_label = None
     last_display_confidence = 0.0
     last_total_reps = 0
     last_correct_reps = 0
     display_label_until = 0
     captured_feedback_codes = set()
+    pending_error_frames = {}
 
 def save_error_screenshot(image, frame_decision):
+    global pending_error_frames
     feedback_code = frame_decision.feedback_code or "unknown_error"
     if feedback_code in captured_feedback_codes:
         return
@@ -43,13 +46,15 @@ def save_error_screenshot(image, frame_decision):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"rep_{frame_decision.total_reps}_{feedback_code}_{timestamp}.jpg"
     image_path = screenshot_dir / filename
-    cv2.imwrite(str(image_path), image)
+    image_to_save = pending_error_frames.pop(feedback_code, image)
+    cv2.imwrite(str(image_path), image_to_save)
     relative_path = image_path.relative_to(base_dir).as_posix()
     captured_feedback_codes.add(feedback_code)
     tracking_session.add_error_screenshot(
         rep_number = frame_decision.total_reps, feedback_code = feedback_code,
         feedback = frame_decision.feedback or "No feedback recorded.", image_path = relative_path,
     )
+    pending_error_frames.clear()
 
 def draw_pose_landmarks(frame):
     global last_display_label, last_display_confidence, last_total_reps, last_correct_reps, display_label_until
@@ -68,6 +73,30 @@ def draw_pose_landmarks(frame):
         current_time = time.time()
         reps = frame_decision.total_reps
         correct_reps = frame_decision.correct_reps
+        if frame_decision.capture_feedback_frame and frame_decision.feedback_code:
+            overwrite_feedback_codes = {
+                "squat_not_deep_enough",
+                "squat_too_deep",
+                "calf_raise_not_raised_high_enough",
+                "calf_raise_not_lowered_enough",
+                "push_up_not_low_enough",
+                "push_up_too_low",
+                "bicep_curl_not_curled_high_enough",
+                "bicep_curl_not_lowered_enough",
+                "bicep_curl_elbows_moving",
+                "shoulder_press_not_pressed_high_enough",
+                "shoulder_press_not_lowered_enough",
+                "shoulder_press_arms_not_even",
+                "crunch_not_lifted_high_enough",
+                "crunch_not_lowered_enough",
+                "overhead_extension_not_lowered_enough",
+                "overhead_extension_not_extended_enough",
+                "overhead_extension_elbows_moving",
+                "superman_upper_body_not_lifted_enough",
+                "superman_legs_not_lifted_enough",
+            }
+            if (frame_decision.feedback_code in overwrite_feedback_codes or frame_decision.feedback_code not in pending_error_frames):
+                pending_error_frames[frame_decision.feedback_code] = analysis_image.copy()
         if reps > last_total_reps and correct_reps == last_correct_reps:
             save_error_screenshot(analysis_image, frame_decision)
         if frame_decision.display_label and reps > last_total_reps:

@@ -25,6 +25,8 @@ class CrunchRule(BaseExerciseRule):
         self.start_shoulder_y = None
         self.max_shoulder_lift_during_rep = None
         self.min_shoulder_lift_during_rep = None
+        self.capture_highest_crunch_frame = False
+        self.capture_lowest_crunch_frame = False
 
     def validate_activation(self, landmarks):
         metrics = self._get_pose_metrics(landmarks)
@@ -46,6 +48,30 @@ class CrunchRule(BaseExerciseRule):
         self.missing_frames = 0
         self._update_rep_metrics(metrics)
 
+        capture_result = None
+
+        if self.capture_highest_crunch_frame:
+            capture_result = RuleResult(
+                rep_completed=False,
+                keep_active=True,
+                is_correct=True,
+                feedback=None,
+                feedback_code="crunch_not_lifted_high_enough",
+                feedback_level=None,
+                capture_feedback_frame=True,
+            )
+
+        if self.capture_lowest_crunch_frame:
+            capture_result = RuleResult(
+                rep_completed=False,
+                keep_active=True,
+                is_correct=True,
+                feedback=None,
+                feedback_code="crunch_not_lowered_enough",
+                feedback_level=None,
+                capture_feedback_frame=True,
+            )
+
         shoulder_lift = self._get_shoulder_lift(metrics["shoulder_y"])
 
         if shoulder_lift >= self.crunch_up_threshold:
@@ -65,6 +91,9 @@ class CrunchRule(BaseExerciseRule):
             result = self._build_crunch_feedback()
             self.reset()
             return result
+        
+        if capture_result is not None:
+            return capture_result
 
         return RuleResult()
 
@@ -76,25 +105,22 @@ class CrunchRule(BaseExerciseRule):
         self.start_shoulder_y = None
         self.max_shoulder_lift_during_rep = None
         self.min_shoulder_lift_during_rep = None
+        self.capture_highest_crunch_frame = False
+        self.capture_lowest_crunch_frame = False
 
     def _update_rep_metrics(self, metrics):
         shoulder_lift = self._get_shoulder_lift(metrics["shoulder_y"])
 
-        if self.max_shoulder_lift_during_rep is None:
-            self.max_shoulder_lift_during_rep = shoulder_lift
-        else:
-            self.max_shoulder_lift_during_rep = max(
-                self.max_shoulder_lift_during_rep,
-                shoulder_lift,
-            )
+        self.capture_highest_crunch_frame = False
+        self.capture_lowest_crunch_frame = False
 
-        if self.min_shoulder_lift_during_rep is None:
+        if self.max_shoulder_lift_during_rep is None or shoulder_lift > self.max_shoulder_lift_during_rep:
+            self.max_shoulder_lift_during_rep = shoulder_lift
+            self.capture_highest_crunch_frame = True
+
+        if self.min_shoulder_lift_during_rep is None or shoulder_lift < self.min_shoulder_lift_during_rep:
             self.min_shoulder_lift_during_rep = shoulder_lift
-        else:
-            self.min_shoulder_lift_during_rep = min(
-                self.min_shoulder_lift_during_rep,
-                shoulder_lift,
-            )
+            self.capture_lowest_crunch_frame = True
 
     def _get_shoulder_lift(self, shoulder_y):
         if self.start_shoulder_y is None or shoulder_y > self.start_shoulder_y:
@@ -109,7 +135,7 @@ class CrunchRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Crunch range of motion could not be measured clearly.",
-                feedback_code="range_not_measured",
+                feedback_code="crunch_range_not_measured",
                 feedback_level="warning",
             )
 
@@ -119,7 +145,7 @@ class CrunchRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Lift your shoulders a little higher during the crunch.",
-                feedback_code="not_lifted_high_enough",
+                feedback_code="crunch_not_lifted_high_enough",
                 feedback_level="warning",
             )
 
@@ -129,7 +155,7 @@ class CrunchRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Lower back down with control before the next crunch.",
-                feedback_code="not_lowered_enough",
+                feedback_code="crunch_not_lowered_enough",
                 feedback_level="warning",
             )
 
@@ -138,7 +164,7 @@ class CrunchRule(BaseExerciseRule):
             keep_active=False,
             is_correct=True,
             feedback="Good crunch.",
-            feedback_code="correct_crunch",
+            feedback_code="crunch_correct",
             feedback_level="success",
         )
 

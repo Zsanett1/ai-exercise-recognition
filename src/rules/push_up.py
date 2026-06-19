@@ -38,6 +38,8 @@ class PushUpRule(BaseExerciseRule):
         self.missing_frames = 0
         self.min_elbow_angle_during_rep = None
         self.min_body_angle_during_rep = None
+        self.capture_lowest_frame = False
+        self.capture_body_alignment_frame = False
 
     def validate_activation(self, landmarks):
         metrics = self._get_pose_metrics(landmarks)
@@ -92,11 +94,44 @@ class PushUpRule(BaseExerciseRule):
 
         self.missing_frames = 0
         self._update_min_body_angle(metrics["average_body_angle"])
+        capture_result = None
+
+        if self.capture_body_alignment_frame and metrics["average_body_angle"] < self.body_straight_angle_threshold:
+            capture_result = RuleResult(
+                rep_completed=False,
+                keep_active=True,
+                is_correct=False,
+                feedback="Keep your body in a straighter line during the push-up.",
+                feedback_code="push_up_body_not_straight",
+                feedback_level="warning",
+                capture_feedback_frame=True,
+            )
 
         if metrics["average_elbow_angle"] <= self.down_elbow_angle_threshold:
             self.push_up_down_frames += 1
             self.push_up_up_frames = 0
             self._update_min_elbow_angle(metrics["average_elbow_angle"])
+            if self.capture_lowest_frame:
+                capture_result = RuleResult(
+                    rep_completed=False,
+                    keep_active=True,
+                    is_correct=True,
+                    feedback=None,
+                    feedback_code="push_up_not_low_enough",
+                    feedback_level=None,
+                    capture_feedback_frame=True,
+                )
+
+            if self.min_elbow_angle_during_rep is not None and self.min_elbow_angle_during_rep < self.correct_depth_min_angle:
+                capture_result = RuleResult(
+                    rep_completed=False,
+                    keep_active=True,
+                    is_correct=False,
+                    feedback="You went too low during the push-up.",
+                    feedback_code="push_up_too_low",
+                    feedback_level="warning",
+                    capture_feedback_frame=True,
+                )
         elif metrics["average_elbow_angle"] >= self.up_elbow_angle_threshold:
             self.push_up_up_frames += 1
             self.push_up_down_frames = 0
@@ -111,6 +146,9 @@ class PushUpRule(BaseExerciseRule):
             result = self._build_push_up_feedback()
             self.reset()
             return result
+        
+        if capture_result is not None:
+            return capture_result
 
         return RuleResult()
 
@@ -121,24 +159,22 @@ class PushUpRule(BaseExerciseRule):
         self.missing_frames = 0
         self.min_elbow_angle_during_rep = None
         self.min_body_angle_during_rep = None
+        self.capture_lowest_frame = False
+        self.capture_body_alignment_frame = False
 
     def _update_min_elbow_angle(self, elbow_angle):
-        if self.min_elbow_angle_during_rep is None:
+        if self.min_elbow_angle_during_rep is None or elbow_angle < self.min_elbow_angle_during_rep:
             self.min_elbow_angle_during_rep = elbow_angle
+            self.capture_lowest_frame = True
         else:
-            self.min_elbow_angle_during_rep = min(
-                self.min_elbow_angle_during_rep,
-                elbow_angle,
-            )
+            self.capture_lowest_frame = False
 
     def _update_min_body_angle(self, body_angle):
-        if self.min_body_angle_during_rep is None:
+        if self.min_body_angle_during_rep is None or body_angle < self.min_body_angle_during_rep:
             self.min_body_angle_during_rep = body_angle
+            self.capture_body_alignment_frame = True
         else:
-            self.min_body_angle_during_rep = min(
-                self.min_body_angle_during_rep,
-                body_angle,
-            )
+            self.capture_body_alignment_frame = False
 
     def _build_push_up_feedback(self):
         if self.min_elbow_angle_during_rep is None:
@@ -147,7 +183,7 @@ class PushUpRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Push-up depth could not be measured clearly.",
-                feedback_code="depth_not_measured",
+                feedback_code="push_up_depth_not_measured",
                 feedback_level="warning",
             )
 
@@ -160,7 +196,7 @@ class PushUpRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Keep your body in a straighter line during the push-up.",
-                feedback_code="body_not_straight",
+                feedback_code="push_up_body_not_straight",
                 feedback_level="warning",
             )
 
@@ -170,7 +206,7 @@ class PushUpRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Lower your chest more during the push-up.",
-                feedback_code="not_low_enough",
+                feedback_code="push_up_not_low_enough",
                 feedback_level="warning",
             )
 
@@ -180,7 +216,7 @@ class PushUpRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="You went too low during the push-up.",
-                feedback_code="too_low",
+                feedback_code="push_up_too_low",
                 feedback_level="warning",
             )
 
@@ -189,7 +225,7 @@ class PushUpRule(BaseExerciseRule):
             keep_active=False,
             is_correct=True,
             feedback="Good push-up.",
-            feedback_code="correct_push_up",
+            feedback_code="push_up_correct",
             feedback_level="success",
         )
 

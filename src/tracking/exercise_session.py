@@ -13,7 +13,8 @@ data_path = base_dir / "data" / "dataset.csv"
 videos_path = base_dir / "videos"
 
 class ExerciseTrackingSession:
-    def __init__(self):
+    def __init__(self, target_label = None):
+        self.target_label = target_label
         self.hidden_classes = {"idle"}
         self.min_confidence_to_display = 0.70
         self.min_confidence_to_consider = 0.40
@@ -69,12 +70,17 @@ class ExerciseTrackingSession:
             row.extend([lm.x, lm.y, lm.z, lm.visibility])
         
         prediction = self.model.predict(np.array([row]), verbose = 0)
+        # if self.target_label and self.target_label in self.class_names:
+        #     target_index = self.class_names.index(self.target_label)
+        #     candidates = [
+        #        (self.target_label, float(prediction[0][target_index]))
+        #     ]
+        # else:
         candidate_indexes = np.argsort(prediction[0])[-self.top_prediction_count:][::-1]
         candidates = [
             (self.class_names[int(index)], float(prediction[0][int(index)]))
             for index in candidate_indexes
         ]
-
         frame_decision = self.rule_manager.process_candidates(candidates, landmarks)
         self.update_from_decision(frame_decision)
         return frame_decision

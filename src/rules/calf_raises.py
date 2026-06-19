@@ -24,6 +24,8 @@ class CalfRaisesRule(BaseExerciseRule):
         self.missing_frames = 0
         self.max_heel_lift_during_rep = None
         self.min_heel_lift_during_rep = None
+        self.capture_highest_frame = False
+        self.capture_lowest_frame = False
 
     def validate_activation(self, landmarks):
         metrics = self._get_pose_metrics(landmarks)
@@ -44,6 +46,28 @@ class CalfRaisesRule(BaseExerciseRule):
 
         self.missing_frames = 0
         self._update_rep_metrics(metrics)
+        capture_result = None
+
+        if self.capture_highest_frame:
+            capture_result = RuleResult(
+                rep_completed = False,
+                keep_active = True,
+                is_correct = True,
+                feedback = None,
+                feedback_code = "calf_raise_not_raised_high_enough",
+                feedback_level = None,
+                capture_feedback_frame = True,
+            )
+            if self.capture_lowest_frame:
+                capture_result = RuleResult(
+                    rep_completed=False,
+                    keep_active=True,
+                    is_correct=True,
+                    feedback=None,
+                    feedback_code="calf_raise_not_lowered_enough",
+                    feedback_level=None,
+                    capture_feedback_frame=True,
+                )
 
         if metrics["average_heel_lift"] >= self.raised_heel_threshold:
             self.raised_frames += 1
@@ -62,6 +86,9 @@ class CalfRaisesRule(BaseExerciseRule):
             result = self._build_calf_raise_feedback()
             self.reset()
             return result
+        
+        if capture_result is not None:
+            return capture_result
 
         return RuleResult()
 
@@ -72,17 +99,19 @@ class CalfRaisesRule(BaseExerciseRule):
         self.missing_frames = 0
         self.max_heel_lift_during_rep = None
         self.min_heel_lift_during_rep = None
+        self.max_heel_lift_during_rep = None
+        self.min_heel_lift_during_rep = None
 
     def _update_rep_metrics(self, metrics):
         heel_lift = metrics["average_heel_lift"]
-
-        if self.max_heel_lift_during_rep is None:
+        self.capture_highest_frame = False
+        self.capture_lowest_frame = False
+        if self.max_heel_lift_during_rep is None or heel_lift > self.max_heel_lift_during_rep:
             self.max_heel_lift_during_rep = heel_lift
-        else:
-            self.max_heel_lift_during_rep = max(
-                self.max_heel_lift_during_rep,
-                heel_lift,
-            )
+            self.capture_highest_frame = True
+        if self.min_heel_lift_during_rep is None or heel_lift < self.min_heel_lift_during_rep:
+            self.min_heel_lift_during_rep  = heel_lift
+            self.capture_lowest_frame = True
 
         if self.min_heel_lift_during_rep is None:
             self.min_heel_lift_during_rep = heel_lift
@@ -99,7 +128,7 @@ class CalfRaisesRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Calf raise range of motion could not be measured clearly.",
-                feedback_code="range_not_measured",
+                feedback_code="calf_raise_range_not_measured",
                 feedback_level="warning",
             )
 
@@ -109,7 +138,7 @@ class CalfRaisesRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Rise higher onto the balls of your feet.",
-                feedback_code="not_raised_high_enough",
+                feedback_code="calf_raise_not_raised_high_enough",
                 feedback_level="warning",
             )
 
@@ -119,7 +148,7 @@ class CalfRaisesRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Lower your heels fully before the next rep.",
-                feedback_code="not_lowered_enough",
+                feedback_code="calf_raise_not_lowered_enough",
                 feedback_level="warning",
             )
 
@@ -128,7 +157,7 @@ class CalfRaisesRule(BaseExerciseRule):
             keep_active=False,
             is_correct=True,
             feedback="Good calf raise.",
-            feedback_code="correct_calf_raise",
+            feedback_code="calf_raise_correct",
             feedback_level="success",
         )
 

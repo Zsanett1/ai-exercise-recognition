@@ -34,6 +34,9 @@ class OverheadExtensionRule(BaseExerciseRule):
         self.min_elbow_angle_during_rep = None
         self.max_elbow_drift_during_rep = 0.0
         self.start_elbow_center = None
+        self.capture_highest_extension_frame = False
+        self.capture_lowest_extension_frame = False
+        self.capture_elbow_drift_frame = False
 
     def validate_activation(self, landmarks):
         metrics = self._get_pose_metrics(landmarks)
@@ -61,6 +64,41 @@ class OverheadExtensionRule(BaseExerciseRule):
         self.missing_frames = 0
         self._update_rep_metrics(metrics)
 
+        capture_result = None
+
+        if self.capture_lowest_extension_frame:
+            capture_result = RuleResult(
+                rep_completed=False,
+                keep_active=True,
+                is_correct=True,
+                feedback=None,
+                feedback_code="overhead_extension_not_lowered_enough",
+                feedback_level=None,
+                capture_feedback_frame=True,
+            )
+
+        if self.capture_highest_extension_frame:
+            capture_result = RuleResult(
+                rep_completed=False,
+                keep_active=True,
+                is_correct=True,
+                feedback=None,
+                feedback_code="overhead_extension_not_extended_enough",
+                feedback_level=None,
+                capture_feedback_frame=True,
+            )
+
+        if self.capture_elbow_drift_frame and self.max_elbow_drift_during_rep > self.elbow_drift_threshold:
+            capture_result = RuleResult(
+                rep_completed=False,
+                keep_active=True,
+                is_correct=False,
+                feedback="Keep your elbows more stable during the overhead extension.",
+                feedback_code="overhead_extension_elbows_moving",
+                feedback_level="warning",
+                capture_feedback_frame=True,
+            )
+
         wrists_overhead = (
             metrics["average_wrist_y"]
             <= metrics["average_shoulder_y"] - self.overhead_wrist_offset_threshold
@@ -86,6 +124,9 @@ class OverheadExtensionRule(BaseExerciseRule):
             result = self._build_extension_feedback()
             self.reset()
             return result
+        
+        if capture_result is not None:
+            return capture_result
 
         return RuleResult()
 
@@ -98,25 +139,24 @@ class OverheadExtensionRule(BaseExerciseRule):
         self.min_elbow_angle_during_rep = None
         self.max_elbow_drift_during_rep = 0.0
         self.start_elbow_center = None
+        self.capture_highest_extension_frame = False
+        self.capture_lowest_extension_frame = False
+        self.capture_elbow_drift_frame = False
 
     def _update_rep_metrics(self, metrics):
         elbow_angle = metrics["average_elbow_angle"]
 
-        if self.max_elbow_angle_during_rep is None:
-            self.max_elbow_angle_during_rep = elbow_angle
-        else:
-            self.max_elbow_angle_during_rep = max(
-                self.max_elbow_angle_during_rep,
-                elbow_angle,
-            )
+        self.capture_highest_extension_frame = False
+        self.capture_lowest_extension_frame = False
+        self.capture_elbow_drift_frame = False
 
-        if self.min_elbow_angle_during_rep is None:
+        if self.max_elbow_angle_during_rep is None or elbow_angle > self.max_elbow_angle_during_rep:
+            self.max_elbow_angle_during_rep = elbow_angle
+            self.capture_highest_extension_frame = True
+
+        if self.min_elbow_angle_during_rep is None or elbow_angle < self.min_elbow_angle_during_rep:
             self.min_elbow_angle_during_rep = elbow_angle
-        else:
-            self.min_elbow_angle_during_rep = min(
-                self.min_elbow_angle_during_rep,
-                elbow_angle,
-            )
+            self.capture_lowest_extension_frame = True
 
         elbow_center = metrics["elbow_center"]
         if self.start_elbow_center is None:
@@ -124,10 +164,9 @@ class OverheadExtensionRule(BaseExerciseRule):
             return
 
         elbow_drift = self._calculate_distance(self.start_elbow_center, elbow_center)
-        self.max_elbow_drift_during_rep = max(
-            self.max_elbow_drift_during_rep,
-            elbow_drift,
-        )
+        if elbow_drift > self.max_elbow_drift_during_rep:
+            self.max_elbow_drift_during_rep = elbow_drift
+            self.capture_elbow_drift_frame = True
 
     def _build_extension_feedback(self):
         if self.max_elbow_angle_during_rep is None or self.min_elbow_angle_during_rep is None:
@@ -136,7 +175,7 @@ class OverheadExtensionRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Overhead extension range of motion could not be measured clearly.",
-                feedback_code="range_not_measured",
+                feedback_code="overhead_extension_range_not_measured",
                 feedback_level="warning",
             )
 
@@ -146,7 +185,7 @@ class OverheadExtensionRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Keep your elbows more stable during the overhead extension.",
-                feedback_code="elbows_moving",
+                feedback_code="overhead_extension_elbows_moving",
                 feedback_level="warning",
             )
 
@@ -156,7 +195,7 @@ class OverheadExtensionRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Lower the weight farther behind your head.",
-                feedback_code="not_lowered_enough",
+                feedback_code="overhead_extension_not_lowered_enough",
                 feedback_level="warning",
             )
 
@@ -166,7 +205,7 @@ class OverheadExtensionRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Extend your arms more at the top.",
-                feedback_code="not_extended_enough",
+                feedback_code="overhead_extension_not_extended_enough",
                 feedback_level="warning",
             )
 
@@ -175,7 +214,7 @@ class OverheadExtensionRule(BaseExerciseRule):
             keep_active=False,
             is_correct=True,
             feedback="Good overhead extension.",
-            feedback_code="correct_overhead_extension",
+            feedback_code="overhead_extension_correct",
             feedback_level="success",
         )
 

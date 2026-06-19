@@ -29,6 +29,8 @@ class SupermanRule(BaseExerciseRule):
         self.max_upper_lift_during_rep = None
         self.max_leg_lift_during_rep = None
         self.raised_hold_started_at = None
+        self.capture_highest_upper_body_frame = False
+        self.capture_highest_leg_frame = False
 
     def validate_activation(self, landmarks):
         metrics = self._get_pose_metrics(landmarks)
@@ -55,6 +57,30 @@ class SupermanRule(BaseExerciseRule):
 
         self.missing_frames = 0
         self._update_rep_metrics(metrics)
+
+        capture_result = None
+
+        if self.capture_highest_upper_body_frame:
+            capture_result = RuleResult(
+                rep_completed=False,
+                keep_active=True,
+                is_correct=True,
+                feedback=None,
+                feedback_code="superman_upper_body_not_lifted_enough",
+                feedback_level=None,
+                capture_feedback_frame=True,
+            )
+
+        if self.capture_highest_leg_frame:
+            capture_result = RuleResult(
+                rep_completed=False,
+                keep_active=True,
+                is_correct=True,
+                feedback=None,
+                feedback_code="superman_legs_not_lifted_enough",
+                feedback_level=None,
+                capture_feedback_frame=True,
+            )
 
         if (
             metrics["upper_body_lift"] >= self.raised_lift_threshold
@@ -90,7 +116,7 @@ class SupermanRule(BaseExerciseRule):
                 keep_active=True,
                 is_correct=True,
                 feedback="Good superman hold.",
-                feedback_code="correct_superman_hold",
+                feedback_code="superman_correct_hold",
                 feedback_level="success",
             )
 
@@ -98,6 +124,9 @@ class SupermanRule(BaseExerciseRule):
             result = self._build_superman_feedback()
             self.reset()
             return result
+        
+        if capture_result is not None:
+            return capture_result
 
         return RuleResult()
 
@@ -109,23 +138,19 @@ class SupermanRule(BaseExerciseRule):
         self.max_upper_lift_during_rep = None
         self.max_leg_lift_during_rep = None
         self.raised_hold_started_at = None
+        self.capture_highest_upper_body_frame = False
+        self.capture_highest_leg_frame = False
 
     def _update_rep_metrics(self, metrics):
-        if self.max_upper_lift_during_rep is None:
+        self.capture_highest_upper_body_frame = False
+        self.capture_highest_leg_frame = False
+        if self.max_upper_lift_during_rep is None or metrics["upper_body_lift"] > self.max_upper_lift_during_rep:
             self.max_upper_lift_during_rep = metrics["upper_body_lift"]
-        else:
-            self.max_upper_lift_during_rep = max(
-                self.max_upper_lift_during_rep,
-                metrics["upper_body_lift"],
-            )
+            self.capture_highest_upper_body_frame = True
 
-        if self.max_leg_lift_during_rep is None:
+        if self.max_leg_lift_during_rep is None or metrics["leg_lift"] > self.max_leg_lift_during_rep:
             self.max_leg_lift_during_rep = metrics["leg_lift"]
-        else:
-            self.max_leg_lift_during_rep = max(
-                self.max_leg_lift_during_rep,
-                metrics["leg_lift"],
-            )
+            self.capture_highest_leg_frame = True
 
     def _build_superman_feedback(self):
         if self.max_upper_lift_during_rep is None or self.max_leg_lift_during_rep is None:
@@ -134,7 +159,7 @@ class SupermanRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Superman range of motion could not be measured clearly.",
-                feedback_code="range_not_measured",
+                feedback_code="superman_range_not_measured",
                 feedback_level="warning",
             )
 
@@ -144,7 +169,7 @@ class SupermanRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Lift your chest and arms a little higher with control.",
-                feedback_code="upper_body_not_lifted_enough",
+                feedback_code="superman_upper_body_not_lifted_enough",
                 feedback_level="warning",
             )
 
@@ -154,7 +179,7 @@ class SupermanRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Lift your legs a little higher while keeping the movement controlled.",
-                feedback_code="legs_not_lifted_enough",
+                feedback_code="superman_legs_not_lifted_enough",
                 feedback_level="warning",
             )
 
@@ -163,7 +188,7 @@ class SupermanRule(BaseExerciseRule):
             keep_active=False,
             is_correct=True,
             feedback="Good superman.",
-            feedback_code="correct_superman",
+            feedback_code="superman_correct",
             feedback_level="success",
         )
 

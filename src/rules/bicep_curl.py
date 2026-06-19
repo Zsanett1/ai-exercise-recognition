@@ -30,6 +30,9 @@ class BicepCurlRule(BaseExerciseRule):
         self.max_elbow_angle_during_rep = None
         self.max_elbow_drift_during_rep = 0.0
         self.start_elbow_center = None
+        self.capture_highest_curl_frame = False
+        self.capture_lowest_curl_frame = False
+        self.capture_elbow_drift_frame = False
 
     def validate_activation(self, landmarks):
         metrics = self._get_pose_metrics(landmarks)
@@ -50,6 +53,40 @@ class BicepCurlRule(BaseExerciseRule):
 
         self.missing_frames = 0
         self._update_rep_metrics(metrics)
+        capture_result = None
+
+        if self.capture_highest_curl_frame:
+            capture_result = RuleResult(
+                rep_completed=False,
+                keep_active=True,
+                is_correct=True,
+                feedback=None,
+                feedback_code="bicep_curl_not_curled_high_enough",
+                feedback_level=None,
+                capture_feedback_frame=True,
+            )
+
+        if self.capture_lowest_curl_frame:
+            capture_result = RuleResult(
+                rep_completed=False,
+                keep_active=True,
+                is_correct=True,
+                feedback=None,
+                feedback_code="bicep_curl_not_lowered_enough",
+                feedback_level=None,
+                capture_feedback_frame=True,
+            )
+
+        if self.capture_elbow_drift_frame and self.max_elbow_drift_during_rep > self.elbow_drift_threshold:
+            capture_result = RuleResult(
+                rep_completed=False,
+                keep_active=True,
+                is_correct=False,
+                feedback="Keep your elbows more stable during the curl.",
+                feedback_code="bicep_curl_elbows_moving",
+                feedback_level="warning",
+                capture_feedback_frame=True,
+            )
 
         if metrics["average_elbow_angle"] <= self.curled_angle_threshold:
             self.curled_frames += 1
@@ -68,6 +105,9 @@ class BicepCurlRule(BaseExerciseRule):
             result = self._build_curl_feedback()
             self.reset()
             return result
+        
+        if capture_result is not None:
+            return capture_result
 
         return RuleResult()
 
@@ -80,25 +120,23 @@ class BicepCurlRule(BaseExerciseRule):
         self.max_elbow_angle_during_rep = None
         self.max_elbow_drift_during_rep = 0.0
         self.start_elbow_center = None
+        self.capture_highest_curl_frame = False
+        self.capture_lowest_curl_frame = False
+        self.capture_elbow_drift_frame = False
 
     def _update_rep_metrics(self, metrics):
         elbow_angle = metrics["average_elbow_angle"]
+        self.capture_highest_curl_frame = False
+        self.capture_lowest_curl_frame = False
+        self.capture_elbow_drift_frame = False
 
-        if self.min_elbow_angle_during_rep is None:
+        if self.min_elbow_angle_during_rep is None or elbow_angle < self.min_elbow_angle_during_rep:
             self.min_elbow_angle_during_rep = elbow_angle
-        else:
-            self.min_elbow_angle_during_rep = min(
-                self.min_elbow_angle_during_rep,
-                elbow_angle,
-            )
+            self.capture_highest_curl_frame = True
 
-        if self.max_elbow_angle_during_rep is None:
+        if self.max_elbow_angle_during_rep is None or elbow_angle > self.max_elbow_angle_during_rep:
             self.max_elbow_angle_during_rep = elbow_angle
-        else:
-            self.max_elbow_angle_during_rep = max(
-                self.max_elbow_angle_during_rep,
-                elbow_angle,
-            )
+            self.capture_lowest_curl_frame = True
 
         elbow_center = metrics["elbow_center"]
         if self.start_elbow_center is None:
@@ -106,10 +144,9 @@ class BicepCurlRule(BaseExerciseRule):
             return
 
         elbow_drift = self._calculate_distance(self.start_elbow_center, elbow_center)
-        self.max_elbow_drift_during_rep = max(
-            self.max_elbow_drift_during_rep,
-            elbow_drift,
-        )
+        if elbow_drift > self.max_elbow_drift_during_rep:
+            self.max_elbow_drift_during_rep = elbow_drift
+            self.capture_elbow_drift_frame = True
 
     def _build_curl_feedback(self):
         if self.min_elbow_angle_during_rep is None or self.max_elbow_angle_during_rep is None:
@@ -118,7 +155,7 @@ class BicepCurlRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Bicep curl range of motion could not be measured clearly.",
-                feedback_code="range_not_measured",
+                feedback_code="bicep_curl_range_not_measured",
                 feedback_level="warning",
             )
 
@@ -128,7 +165,7 @@ class BicepCurlRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Keep your elbows more stable during the curl.",
-                feedback_code="elbows_moving",
+                feedback_code="bicep_curl_elbows_moving",
                 feedback_level="warning",
             )
 
@@ -138,7 +175,7 @@ class BicepCurlRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Curl the weight higher to complete the movement.",
-                feedback_code="not_curled_high_enough",
+                feedback_code="bicep_curl_not_curled_high_enough",
                 feedback_level="warning",
             )
 
@@ -148,7 +185,7 @@ class BicepCurlRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Lower your arm more before starting the next curl.",
-                feedback_code="not_lowered_enough",
+                feedback_code="bicep_curl_not_lowered_enough",
                 feedback_level="warning",
             )
 
@@ -157,7 +194,7 @@ class BicepCurlRule(BaseExerciseRule):
             keep_active=False,
             is_correct=True,
             feedback="Good bicep curl.",
-            feedback_code="correct_bicep_curl",
+            feedback_code="bicep_curl_correct",
             feedback_level="success",
         )
 

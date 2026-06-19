@@ -12,6 +12,7 @@ class FrameDecision:
     feedback: str | None
     feedback_code: str | None
     feedback_level: str | None
+    capture_feedback_frame: bool
 
 @dataclass
 class RuleResult:
@@ -22,6 +23,7 @@ class RuleResult:
     feedback: str | None = None
     feedback_code: str | None = None
     feedback_level: str | None = None
+    capture_feedback_frame: bool = False
 
 class BaseExerciseRule:
     def validate_activation(self, landmarks):
@@ -138,12 +140,13 @@ class RuleManager:
             active_rule = self.rules.get(label)
             if active_rule:
                 active_rule.on_activate()
-
+        capture_feedback_frame = False
         if self.active_label:
             active_rule = self.rules.get(self.active_label)
 
             if active_rule:
                 rule_result = active_rule.process_active_frame(landmarks)
+                capture_feedback_frame = rule_result.capture_feedback_frame
                 self.current_feedback = rule_result.feedback
                 self.current_feedback_code = rule_result.feedback_code
                 self.current_feedback_level = rule_result.feedback_level
@@ -174,6 +177,7 @@ class RuleManager:
             feedback=self.current_feedback,
             feedback_code=self.current_feedback_code,
             feedback_level=self.current_feedback_level,
+            capture_feedback_frame=capture_feedback_frame,
         )
 
     def _is_valid_candidate(self, label, confidence, landmarks, min_confidence=None):

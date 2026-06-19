@@ -33,6 +33,9 @@ class ShoulderPressRule(BaseExerciseRule):
         self.max_elbow_angle_during_rep = None
         self.min_elbow_angle_during_rep = None
         self.max_wrist_asymmetry_during_rep = 0.0
+        self.capture_highest_press_frame = False
+        self.capture_lowest_press_frame = False
+        self.capture_arm_asymmetry_frame = False
 
     def validate_activation(self, landmarks):
         metrics = self._get_pose_metrics(landmarks)
@@ -58,6 +61,40 @@ class ShoulderPressRule(BaseExerciseRule):
 
         self.missing_frames = 0
         self._update_rep_metrics(metrics)
+        capture_result = None
+
+        if self.capture_highest_press_frame:
+            capture_result = RuleResult(
+                rep_completed=False,
+                keep_active=True,
+                is_correct=True,
+                feedback=None,
+                feedback_code="shoulder_press_not_pressed_high_enough",
+                feedback_level=None,
+                capture_feedback_frame=True,
+            )
+
+        if self.capture_lowest_press_frame:
+            capture_result = RuleResult(
+                rep_completed=False,
+                keep_active=True,
+                is_correct=True,
+                feedback=None,
+                feedback_code="shoulder_press_not_lowered_enough",
+                feedback_level=None,
+                capture_feedback_frame=True,
+            )
+
+        if self.capture_arm_asymmetry_frame and self.max_wrist_asymmetry_during_rep > self.arm_asymmetry_threshold:
+            capture_result = RuleResult(
+                rep_completed=False,
+                keep_active=True,
+                is_correct=False,
+                feedback="Press both arms more evenly during the shoulder press.",
+                feedback_code="shoulder_press_arms_not_even",
+                feedback_level="warning",
+                capture_feedback_frame=True,
+            )
 
         wrists_overhead = (
             metrics["average_wrist_y"]
@@ -91,6 +128,9 @@ class ShoulderPressRule(BaseExerciseRule):
             result = self._build_press_feedback()
             self.reset()
             return result
+        
+        if capture_result is not None:
+            return capture_result
 
         return RuleResult()
 
@@ -102,30 +142,27 @@ class ShoulderPressRule(BaseExerciseRule):
         self.max_elbow_angle_during_rep = None
         self.min_elbow_angle_during_rep = None
         self.max_wrist_asymmetry_during_rep = 0.0
+        self.capture_highest_press_frame = False
+        self.capture_lowest_press_frame = False
+        self.capture_arm_asymmetry_frame = False
 
     def _update_rep_metrics(self, metrics):
         elbow_angle = metrics["average_elbow_angle"]
+        self.capture_highest_press_frame = False
+        self.capture_lowest_press_frame = False
+        self.capture_arm_asymmetry_frame = False
 
-        if self.max_elbow_angle_during_rep is None:
+        if self.max_elbow_angle_during_rep is None or elbow_angle > self.max_elbow_angle_during_rep:
             self.max_elbow_angle_during_rep = elbow_angle
-        else:
-            self.max_elbow_angle_during_rep = max(
-                self.max_elbow_angle_during_rep,
-                elbow_angle,
-            )
-
-        if self.min_elbow_angle_during_rep is None:
+            self.capture_highest_press_frame = True
+            
+        if self.min_elbow_angle_during_rep is None or elbow_angle < self.min_elbow_angle_during_rep:
             self.min_elbow_angle_during_rep = elbow_angle
-        else:
-            self.min_elbow_angle_during_rep = min(
-                self.min_elbow_angle_during_rep,
-                elbow_angle,
-            )
+            self.capture_lowest_press_frame = True
 
-        self.max_wrist_asymmetry_during_rep = max(
-            self.max_wrist_asymmetry_during_rep,
-            metrics["wrist_height_asymmetry"],
-        )
+        if metrics["wrist_height_asymmetry"] > self.max_wrist_asymmetry_during_rep:
+            self.max_wrist_asymmetry_during_rep = metrics["wrist_height_asymmetry"]
+            self.capture_arm_asymmetry_frame = True
 
     def _build_press_feedback(self):
         if self.max_elbow_angle_during_rep is None or self.min_elbow_angle_during_rep is None:
@@ -134,7 +171,7 @@ class ShoulderPressRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Shoulder press range of motion could not be measured clearly.",
-                feedback_code="range_not_measured",
+                feedback_code="shoulder_press_range_not_measured",
                 feedback_level="warning",
             )
 
@@ -144,7 +181,7 @@ class ShoulderPressRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Press both arms more evenly during the shoulder press.",
-                feedback_code="arms_not_even",
+                feedback_code="shoulder_press_arms_not_even",
                 feedback_level="warning",
             )
 
@@ -154,7 +191,7 @@ class ShoulderPressRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Press the weights higher overhead.",
-                feedback_code="not_pressed_high_enough",
+                feedback_code="shoulder_press_not_pressed_high_enough",
                 feedback_level="warning",
             )
 
@@ -164,7 +201,7 @@ class ShoulderPressRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Lower the weights closer to shoulder level before the next press.",
-                feedback_code="not_lowered_enough",
+                feedback_code="shoulder_press_not_lowered_enough",
                 feedback_level="warning",
             )
 
@@ -173,7 +210,7 @@ class ShoulderPressRule(BaseExerciseRule):
             keep_active=False,
             is_correct=True,
             feedback="Good shoulder press.",
-            feedback_code="correct_shoulder_press",
+            feedback_code="shoulder_press_correct",
             feedback_level="success",
         )
 

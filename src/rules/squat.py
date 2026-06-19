@@ -36,6 +36,7 @@ class SquatRule(BaseExerciseRule):
         self.current_view = "side"
         self.standing_hip_y = None
         self.min_knee_angle_during_rep = None
+        self.capture_deepest_frame = False
 
     def validate_activation(self, landmarks):
         metrics = self._get_pose_metrics(landmarks)
@@ -68,12 +69,33 @@ class SquatRule(BaseExerciseRule):
 
         self.missing_frames = 0
         self.current_view = metrics["view"]
+        capture_result = None
 
         if self.current_view == "side":
             if metrics["average_knee_angle"] <= self.down_angle_threshold:
                 self.squat_down_frames += 1
                 self.squat_up_frames = 0
                 self._update_min_knee_angle(metrics["average_knee_angle"])
+                if self.capture_deepest_frame:
+                    capture_result = RuleResult(
+                        rep_completed=False,
+                        keep_active=True,
+                        is_correct=True,
+                        feedback=None,
+                        feedback_code="squat_not_deep_enough",
+                        feedback_level=None,
+                        capture_feedback_frame=True,
+                    )
+                if self.min_knee_angle_during_rep is not None and self.min_knee_angle_during_rep < self.correct_depth_min_angle:
+                    capture_result = RuleResult(
+                        rep_completed = False,
+                        keep_active = True,
+                        is_correct = False,
+                        feedback = "You went too deep during the squat.",
+                        feedback_code = "squat_too_deep",
+                        feedback_level = "warning",
+                        capture_feedback_frame=True,
+                    )
             elif metrics["average_knee_angle"] >= self.up_angle_threshold:
                 self.squat_up_frames += 1
                 self.squat_down_frames = 0
@@ -91,6 +113,26 @@ class SquatRule(BaseExerciseRule):
                 self.squat_down_frames += 1
                 self.squat_up_frames = 0
                 self._update_min_knee_angle(metrics["average_knee_angle"])
+                if self.capture_deepest_frame:
+                    capture_result = RuleResult(
+                        rep_completed=False,
+                        keep_active=True,
+                        is_correct=True,
+                        feedback=None,
+                        feedback_code="squat_not_deep_enough",
+                        feedback_level=None,
+                        capture_feedback_frame=True,
+                    )
+                if self.min_knee_angle_during_rep is not None and self.min_knee_angle_during_rep < self.correct_depth_min_angle:
+                    capture_result = RuleResult(
+                        rep_completed = False,
+                        keep_active = True,
+                        is_correct = False,
+                        feedback = "You went too deep during the squat.",
+                        feedback_code = "squat_too_deep",
+                        feedback_level = "warning",
+                        capture_feedback_frame=True,
+                    )
             elif hip_drop <= self.up_drop_threshold:
                 self.squat_up_frames += 1
                 self.squat_down_frames = 0
@@ -105,6 +147,9 @@ class SquatRule(BaseExerciseRule):
             result = self._build_depth_feedback()
             self.reset()
             return result
+        
+        if capture_result is not None:
+            return capture_result
 
         return RuleResult()
 
@@ -115,15 +160,14 @@ class SquatRule(BaseExerciseRule):
         self.missing_frames = 0
         self.current_view = "side"
         self.min_knee_angle_during_rep = None
+        self.capture_deepest_frame = False
 
     def _update_min_knee_angle(self, knee_angle):
-        if self.min_knee_angle_during_rep is None:
+        if self.min_knee_angle_during_rep is None or knee_angle < self.min_knee_angle_during_rep:
             self.min_knee_angle_during_rep = knee_angle
+            self.capture_deepest_frame = True
         else:
-            self.min_knee_angle_during_rep = min(
-                self.min_knee_angle_during_rep,
-                knee_angle,
-        )
+            self.capture_deepest_frame = False
 
     def _build_depth_feedback(self):
         if self.min_knee_angle_during_rep is None:
@@ -132,7 +176,7 @@ class SquatRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="Squat depth could not be measured clearly.",
-                feedback_code="depth_not_measured",
+                feedback_code="squat_depth_not_measured",
                 feedback_level="warning",
             )
 
@@ -142,7 +186,7 @@ class SquatRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="You did not squat deep enough.",
-                feedback_code="not_deep_enough",
+                feedback_code="squat_not_deep_enough",
                 feedback_level="warning",
             )
 
@@ -152,7 +196,7 @@ class SquatRule(BaseExerciseRule):
                 keep_active=False,
                 is_correct=False,
                 feedback="You went too deep during the squat.",
-                feedback_code="too_deep",
+                feedback_code="squat_too_deep",
                 feedback_level="warning",
             )
 
@@ -161,7 +205,7 @@ class SquatRule(BaseExerciseRule):
             keep_active=False,
             is_correct=True,
             feedback="Good squat depth.",
-            feedback_code="correct_squat",
+            feedback_code="squat_correct",
             feedback_level="success",
         )
 

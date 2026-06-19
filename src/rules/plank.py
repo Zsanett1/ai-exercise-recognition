@@ -57,8 +57,9 @@ class PlankRule(BaseExerciseRule):
                 keep_active=True,
                 is_correct=False,
                 feedback="Keep your body in a straighter line during the plank.",
-                feedback_code="body_not_straight",
+                feedback_code="plank_body_not_straight",
                 feedback_level="warning",
+                capture_feedback_frame=True,
             )
 
         if metrics["average_hip_line_offset"] > self.hip_offset_threshold:
@@ -68,8 +69,9 @@ class PlankRule(BaseExerciseRule):
                 keep_active=True,
                 is_correct=False,
                 feedback="Lift your hips slightly to avoid sagging.",
-                feedback_code="hips_sagging",
+                feedback_code="plank_hips_sagging",
                 feedback_level="warning",
+                capture_feedback_frame=True,
             )
 
         if metrics["average_hip_line_offset"] < -self.hip_offset_threshold:
@@ -79,8 +81,9 @@ class PlankRule(BaseExerciseRule):
                 keep_active=True,
                 is_correct=False,
                 feedback="Lower your hips slightly to keep a straight plank.",
-                feedback_code="hips_too_high",
+                feedback_code="plank_hips_too_high",
                 feedback_level="warning",
+                capture_feedback_frame=True,
             )
 
         if self.correct_hold_started_at is None:
@@ -97,7 +100,7 @@ class PlankRule(BaseExerciseRule):
             keep_active=True,
             is_correct=True,
             feedback="Good plank position.",
-            feedback_code="correct_plank",
+            feedback_code="plank_correct",
             feedback_level="success",
         )
 
