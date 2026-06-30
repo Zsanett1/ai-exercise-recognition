@@ -28,9 +28,6 @@ def get_bmi_category(bmi):
     return "Obese range"
 
 def show():
-    #st.title("Profile")
-    #st.caption("Manage your account, workout preferences, and daily training goal.")
-    #st.write("---")
 
     if "logged_in" not in st.session_state:
         st.session_state["logged_in"] = False
