@@ -207,7 +207,6 @@ marimo/_lsp/
 __marimo__/
 
 # Project-local notes, generated assets, and large media
-CHANGE_NOTES.md
 data/dataset.csv
 models/
 videos/
@@ -216,3 +215,4 @@ demo_images/
 fitness_app.db
 assets/session_screenshots/
 .streamlit/secrets.toml
+docs/
