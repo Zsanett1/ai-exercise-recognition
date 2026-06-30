@@ -3,6 +3,7 @@ import mediapipe as mp
 import pandas as pd
 import os
 from pathlib import Path
+from tracking.landmark_features import normalize_landmarks
 
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose(
@@ -15,9 +16,10 @@ base_dir = Path(__file__).resolve().parent.parent
 video_dir = base_dir / "videos"
 output_dir = base_dir / "data" 
 output_file = output_dir / "dataset.csv"
+feature_version = "hip_center_scale_v1"
 
 data_list = []
-metadata_columns = ["label", "split", "source_file", "source_mtime"]
+metadata_columns = ["label", "split", "source_file", "source_mtime", "feature_version"]
 processed_videos = {}
 existing_df = None
 
@@ -26,7 +28,10 @@ print("Collecting data, please wait")
 if output_file.exists():
     existing_df = pd.read_csv(output_file)
 
-    if {"split", "source_file", "source_mtime"}.issubset(existing_df.columns):
+    if (
+        {"split", "source_file", "source_mtime", "feature_version"}.issubset(existing_df.columns)
+        and (existing_df["feature_version"] == feature_version).all()
+    ):
         processed_videos = (
             existing_df[["source_file", "source_mtime"]]
             .drop_duplicates()
@@ -35,7 +40,7 @@ if output_file.exists():
         )
         print(f"Found existing dataset with {len(processed_videos)} processed videos")
     else:
-        print("Legacy dataset format detected, rebuilding dataset once to add source metadata")
+        print("Dataset uses an older feature format, rebuilding dataset")
         existing_df = None
 
 if not os.path.exists(video_dir): 
@@ -86,11 +91,8 @@ else:
 
                     landmarks = results.pose_landmarks.landmark
 
-                    row = []
-                    for lm in landmarks:
-                        row.extend([lm.x, lm.y, lm.z, lm.visibility])
-
-                    row = [label, split, video_key, video_mtime] + row
+                    row = normalize_landmarks(landmarks)
+                    row = [label, split, video_key, video_mtime, feature_version] + row
                     data_list.append(row)
                     frame_count += 1
 

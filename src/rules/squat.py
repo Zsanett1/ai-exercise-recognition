@@ -84,6 +84,7 @@ class SquatRule(BaseExerciseRule):
                         feedback=None,
                         feedback_code="squat_not_deep_enough",
                         feedback_level=None,
+                        feedback_severity=-metrics["average_knee_angle"],
                         capture_feedback_frame=True,
                     )
                 if self.min_knee_angle_during_rep is not None and self.min_knee_angle_during_rep < self.correct_depth_min_angle:
@@ -94,7 +95,8 @@ class SquatRule(BaseExerciseRule):
                         feedback = "You went too deep during the squat.",
                         feedback_code = "squat_too_deep",
                         feedback_level = "warning",
-                        capture_feedback_frame=True,
+                        feedback_severity = self.correct_depth_min_angle - self.min_knee_angle_during_rep,
+                        capture_feedback_frame = self.capture_deepest_frame,
                     )
             elif metrics["average_knee_angle"] >= self.up_angle_threshold:
                 self.squat_up_frames += 1
@@ -121,6 +123,7 @@ class SquatRule(BaseExerciseRule):
                         feedback=None,
                         feedback_code="squat_not_deep_enough",
                         feedback_level=None,
+                        feedback_severity=-metrics["average_knee_angle"],
                         capture_feedback_frame=True,
                     )
                 if self.min_knee_angle_during_rep is not None and self.min_knee_angle_during_rep < self.correct_depth_min_angle:
@@ -131,7 +134,8 @@ class SquatRule(BaseExerciseRule):
                         feedback = "You went too deep during the squat.",
                         feedback_code = "squat_too_deep",
                         feedback_level = "warning",
-                        capture_feedback_frame=True,
+                        feedback_severity = self.correct_depth_min_angle - self.min_knee_angle_during_rep,
+                        capture_feedback_frame = self.capture_deepest_frame,
                     )
             elif hip_drop <= self.up_drop_threshold:
                 self.squat_up_frames += 1

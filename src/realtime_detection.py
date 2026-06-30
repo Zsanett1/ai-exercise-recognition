@@ -9,6 +9,7 @@ import numpy as np
 import tensorflow as tf
 
 from rules import build_rule_manager
+from tracking.landmark_features import normalize_landmarks
 
 base_dir = Path(__file__).resolve().parent.parent
 model_path = base_dir / "models" / "exercise_model.keras"
@@ -82,10 +83,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
         try:
             if results.pose_landmarks:
                 landmarks = results.pose_landmarks.landmark
-                row = []
-                for lm in landmarks:
-                    row.extend([lm.x, lm.y, lm.z, lm.visibility])
-
+                row = normalize_landmarks(landmarks)
                 X = np.array([row])
                 prediction = model.predict(X, verbose=0)
                 candidate_indexes = np.argsort(prediction[0])[-top_prediction_count:][::-1]

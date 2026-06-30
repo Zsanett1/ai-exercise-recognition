@@ -27,7 +27,7 @@ if not required_columns.issubset(df.columns):
     print("Error, dataset must contain label and split columns")
     exit()
 
-feature_columns = [col for col in df.columns if col not in {"label", "split", "source_file", "source_mtime"}]
+feature_columns = [col for col in df.columns if col not in {"label", "split", "source_file", "source_mtime", "feature_version"}]
 y = df['label'].values
 
 encoder = LabelEncoder()

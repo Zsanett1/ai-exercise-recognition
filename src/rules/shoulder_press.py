@@ -71,6 +71,7 @@ class ShoulderPressRule(BaseExerciseRule):
                 feedback=None,
                 feedback_code="shoulder_press_not_pressed_high_enough",
                 feedback_level=None,
+                feedback_severity=self.max_elbow_angle_during_rep,
                 capture_feedback_frame=True,
             )
 
@@ -82,6 +83,7 @@ class ShoulderPressRule(BaseExerciseRule):
                 feedback=None,
                 feedback_code="shoulder_press_not_lowered_enough",
                 feedback_level=None,
+                feedback_severity=-self.min_elbow_angle_during_rep,
                 capture_feedback_frame=True,
             )
 
@@ -93,6 +95,7 @@ class ShoulderPressRule(BaseExerciseRule):
                 feedback="Press both arms more evenly during the shoulder press.",
                 feedback_code="shoulder_press_arms_not_even",
                 feedback_level="warning",
+                feedback_severity=self.max_wrist_asymmetry_during_rep,
                 capture_feedback_frame=True,
             )
 

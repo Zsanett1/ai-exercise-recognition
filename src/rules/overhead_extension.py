@@ -74,6 +74,7 @@ class OverheadExtensionRule(BaseExerciseRule):
                 feedback=None,
                 feedback_code="overhead_extension_not_lowered_enough",
                 feedback_level=None,
+                feedback_severity=-self.min_elbow_angle_during_rep,
                 capture_feedback_frame=True,
             )
 
@@ -85,6 +86,7 @@ class OverheadExtensionRule(BaseExerciseRule):
                 feedback=None,
                 feedback_code="overhead_extension_not_extended_enough",
                 feedback_level=None,
+                feedback_severity=self.max_elbow_angle_during_rep,
                 capture_feedback_frame=True,
             )
 
@@ -96,6 +98,7 @@ class OverheadExtensionRule(BaseExerciseRule):
                 feedback="Keep your elbows more stable during the overhead extension.",
                 feedback_code="overhead_extension_elbows_moving",
                 feedback_level="warning",
+                feedback_severity=self.max_elbow_drift_during_rep,
                 capture_feedback_frame=True,
             )
 

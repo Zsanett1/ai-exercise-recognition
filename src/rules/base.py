@@ -12,6 +12,7 @@ class FrameDecision:
     feedback: str | None
     feedback_code: str | None
     feedback_level: str | None
+    feedback_severity: float | None
     capture_feedback_frame: bool
 
 @dataclass
@@ -23,6 +24,7 @@ class RuleResult:
     feedback: str | None = None
     feedback_code: str | None = None
     feedback_level: str | None = None
+    feedback_severity: float | None = None
     capture_feedback_frame: bool = False
 
 class BaseExerciseRule:
@@ -74,6 +76,7 @@ class RuleManager:
         self.current_feedback = None
         self.current_feedback_code = None
         self.current_feedback_level = None
+        self.current_feedback_severity = None
         self.label_priority = {
             "shoulder_press": 0,
             "overhead_extension": 1,
@@ -150,6 +153,7 @@ class RuleManager:
                 self.current_feedback = rule_result.feedback
                 self.current_feedback_code = rule_result.feedback_code
                 self.current_feedback_level = rule_result.feedback_level
+                self.current_feedback_severity = rule_result.feedback_severity
 
                 if rule_result.rep_completed:
                     self.exercise_counts[self.active_label] += 1
@@ -177,6 +181,7 @@ class RuleManager:
             feedback=self.current_feedback,
             feedback_code=self.current_feedback_code,
             feedback_level=self.current_feedback_level,
+            feedback_severity=getattr(self, "current_feedback_severity", None),
             capture_feedback_frame=capture_feedback_frame,
         )
 

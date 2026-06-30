@@ -2,7 +2,7 @@ import streamlit as st
 from streamlit_webrtc import webrtc_streamer
 from datetime import date, datetime
 import database
-from src.tracking.pose_overlay import draw_pose_landmarks, get_tracking_summary, reset_tracking_session
+from src.tracking.pose_overlay import draw_pose_landmarks, get_tracking_metrics, get_tracking_summary, reset_tracking_session
 import json
 
 def show_exercise_card(exercise):
@@ -30,7 +30,6 @@ def show_exercise_card(exercise):
         if st.button("View details", key = f"details_{exercise['id']}", use_container_width = True):
             st.session_state["details_exercise"] = exercise
             st.rerun()
-    st.write("---")
 
 @st.dialog("Exercise Details", width = "large")
 def show_exercise_details(exercise, is_logged_in):
@@ -183,6 +182,9 @@ def show_tracking_camera():
             st.rerun()
     else:
         summary = get_tracking_summary()
+        # metrics = get_tracking_metrics()
+        # resolution = metrics["resolution"]
+        # resolution_label = f"{resolution[0]}x{resolution[1]}" if resolution else "unknown"
         st.write("")
         with st.container(border = True):
             st.markdown(
@@ -202,6 +204,24 @@ def show_tracking_camera():
             if summary["total_reps"] > 0:
                 st.write("")
                 st.caption("Detailed rep feedback will be available in History after saving this session.")
+            # st.write("")
+            # st.markdown(
+            #     "<span style='color: #64748B; font-weight: 800;'>REAL-TIME METRICS</span>",
+            #     unsafe_allow_html=True
+            # )
+            # metrics_col1, metrics_col2, metrics_col3, metrics_col4 = st.columns(4)
+            # with metrics_col1:
+            #     st.caption("AVERAGE FPS")
+            #     st.markdown(f"**{metrics['average_fps']:.1f}**")
+            # with metrics_col2:
+            #     st.caption("LAST FPS")
+            #     st.markdown(f"**{metrics['current_fps']:.1f}**")
+            # with metrics_col3:
+            #     st.caption("AVG LATENCY")
+            #     st.markdown(f"**{metrics['average_latency_ms']:.0f} ms**")
+            # with metrics_col4:
+            #     st.caption("CAMERA")
+            #     st.markdown(f"**{resolution_label}**")
 
         st.write("")
 

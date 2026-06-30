@@ -63,6 +63,7 @@ class BicepCurlRule(BaseExerciseRule):
                 feedback=None,
                 feedback_code="bicep_curl_not_curled_high_enough",
                 feedback_level=None,
+                feedback_severity=-self.min_elbow_angle_during_rep,
                 capture_feedback_frame=True,
             )
 
@@ -74,6 +75,7 @@ class BicepCurlRule(BaseExerciseRule):
                 feedback=None,
                 feedback_code="bicep_curl_not_lowered_enough",
                 feedback_level=None,
+                feedback_severity=self.max_elbow_angle_during_rep,
                 capture_feedback_frame=True,
             )
 
@@ -85,6 +87,7 @@ class BicepCurlRule(BaseExerciseRule):
                 feedback="Keep your elbows more stable during the curl.",
                 feedback_code="bicep_curl_elbows_moving",
                 feedback_level="warning",
+                feedback_severity=self.max_elbow_drift_during_rep,
                 capture_feedback_frame=True,
             )
 

@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 import tensorflow as tf
 from src.rules import build_rule_manager
+from src.tracking.landmark_features import normalize_landmarks
 
 base_dir = Path(__file__).resolve().parent.parent.parent
 model_path = base_dir / "models" / "exercise_model.keras"
@@ -12,9 +13,13 @@ labels_path = base_dir / "models" / "class_names.json"
 data_path = base_dir / "data" / "dataset.csv"
 videos_path = base_dir / "videos"
 
+TARGET_LABEL_ALIASES = {
+    "calf_raises": "calf_raise",
+}
+
 class ExerciseTrackingSession:
     def __init__(self, target_label = None):
-        self.target_label = target_label
+        self.requested_target_label = target_label
         self.hidden_classes = {"idle"}
         self.min_confidence_to_display = 0.70
         self.min_confidence_to_consider = 0.40
@@ -29,6 +34,7 @@ class ExerciseTrackingSession:
         self.error_screenshots = []
 
         self.class_names = self.load_class_names()
+        self.target_label = self.resolve_target_label(target_label)
         self.model = tf.keras.models.load_model(str(model_path))
         self.rule_manager = build_rule_manager(
             class_names = self.class_names,
@@ -58,6 +64,32 @@ class ExerciseTrackingSession:
                 if os.path.isdir(os.path.join(videos_path, folder))
             )
         raise FileNotFoundError("No labels source found.")
+
+    def resolve_target_label(self, target_label):
+        if not target_label:
+            return None
+        normalized_label = TARGET_LABEL_ALIASES.get(target_label, target_label)
+        if normalized_label in self.class_names:
+            return normalized_label
+        return None
+
+    def build_prediction_candidates(self, prediction):
+        candidate_indexes = np.argsort(prediction[0])[-self.top_prediction_count:][::-1]
+        top_candidates = [
+            (self.class_names[int(index)], float(prediction[0][int(index)]))
+            for index in candidate_indexes
+        ]
+
+        if self.requested_target_label:
+            if not self.target_label:
+                return []
+            return [
+                (label, confidence)
+                for label, confidence in top_candidates
+                if label == self.target_label
+            ]
+
+        return top_candidates
     
     def process_landmarks(self, landmarks):
         if not landmarks:
@@ -65,22 +97,10 @@ class ExerciseTrackingSession:
             self.update_from_decision(frame_decision)
             return frame_decision
         
-        row = []
-        for lm in landmarks:
-            row.extend([lm.x, lm.y, lm.z, lm.visibility])
+        row = normalize_landmarks(landmarks)
         
         prediction = self.model.predict(np.array([row]), verbose = 0)
-        # if self.target_label and self.target_label in self.class_names:
-        #     target_index = self.class_names.index(self.target_label)
-        #     candidates = [
-        #        (self.target_label, float(prediction[0][target_index]))
-        #     ]
-        # else:
-        candidate_indexes = np.argsort(prediction[0])[-self.top_prediction_count:][::-1]
-        candidates = [
-            (self.class_names[int(index)], float(prediction[0][int(index)]))
-            for index in candidate_indexes
-        ]
+        candidates = self.build_prediction_candidates(prediction)
         frame_decision = self.rule_manager.process_candidates(candidates, landmarks)
         self.update_from_decision(frame_decision)
         return frame_decision

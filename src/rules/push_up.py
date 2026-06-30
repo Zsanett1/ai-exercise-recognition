@@ -104,6 +104,7 @@ class PushUpRule(BaseExerciseRule):
                 feedback="Keep your body in a straighter line during the push-up.",
                 feedback_code="push_up_body_not_straight",
                 feedback_level="warning",
+                feedback_severity=self.body_straight_angle_threshold - metrics["average_body_angle"],
                 capture_feedback_frame=True,
             )
 
@@ -119,6 +120,7 @@ class PushUpRule(BaseExerciseRule):
                     feedback=None,
                     feedback_code="push_up_not_low_enough",
                     feedback_level=None,
+                    feedback_severity=-metrics["average_elbow_angle"],
                     capture_feedback_frame=True,
                 )
 
@@ -130,7 +132,8 @@ class PushUpRule(BaseExerciseRule):
                     feedback="You went too low during the push-up.",
                     feedback_code="push_up_too_low",
                     feedback_level="warning",
-                    capture_feedback_frame=True,
+                    feedback_severity=self.correct_depth_min_angle - self.min_elbow_angle_during_rep,
+                    capture_feedback_frame=self.capture_lowest_frame,
                 )
         elif metrics["average_elbow_angle"] >= self.up_elbow_angle_threshold:
             self.push_up_up_frames += 1

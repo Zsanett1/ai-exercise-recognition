@@ -68,6 +68,7 @@ class SupermanRule(BaseExerciseRule):
                 feedback=None,
                 feedback_code="superman_upper_body_not_lifted_enough",
                 feedback_level=None,
+                feedback_severity=self.max_upper_lift_during_rep,
                 capture_feedback_frame=True,
             )
 
@@ -79,6 +80,7 @@ class SupermanRule(BaseExerciseRule):
                 feedback=None,
                 feedback_code="superman_legs_not_lifted_enough",
                 feedback_level=None,
+                feedback_severity=self.max_leg_lift_during_rep,
                 capture_feedback_frame=True,
             )
 

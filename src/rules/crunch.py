@@ -58,6 +58,7 @@ class CrunchRule(BaseExerciseRule):
                 feedback=None,
                 feedback_code="crunch_not_lifted_high_enough",
                 feedback_level=None,
+                feedback_severity=self.max_shoulder_lift_during_rep,
                 capture_feedback_frame=True,
             )
 
@@ -69,6 +70,7 @@ class CrunchRule(BaseExerciseRule):
                 feedback=None,
                 feedback_code="crunch_not_lowered_enough",
                 feedback_level=None,
+                feedback_severity=-self.min_shoulder_lift_during_rep,
                 capture_feedback_frame=True,
             )
 

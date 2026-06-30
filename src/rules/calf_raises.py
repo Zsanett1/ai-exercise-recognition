@@ -56,6 +56,7 @@ class CalfRaisesRule(BaseExerciseRule):
                 feedback = None,
                 feedback_code = "calf_raise_not_raised_high_enough",
                 feedback_level = None,
+                feedback_severity = self.max_heel_lift_during_rep,
                 capture_feedback_frame = True,
             )
             if self.capture_lowest_frame:
@@ -66,6 +67,7 @@ class CalfRaisesRule(BaseExerciseRule):
                     feedback=None,
                     feedback_code="calf_raise_not_lowered_enough",
                     feedback_level=None,
+                    feedback_severity=-self.min_heel_lift_during_rep,
                     capture_feedback_frame=True,
                 )
 
@@ -99,8 +101,8 @@ class CalfRaisesRule(BaseExerciseRule):
         self.missing_frames = 0
         self.max_heel_lift_during_rep = None
         self.min_heel_lift_during_rep = None
-        self.max_heel_lift_during_rep = None
-        self.min_heel_lift_during_rep = None
+        self.capture_highest_frame = False
+        self.capture_lowest_frame = False
 
     def _update_rep_metrics(self, metrics):
         heel_lift = metrics["average_heel_lift"]

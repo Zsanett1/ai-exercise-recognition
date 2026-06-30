@@ -59,6 +59,7 @@ class PlankRule(BaseExerciseRule):
                 feedback="Keep your body in a straighter line during the plank.",
                 feedback_code="plank_body_not_straight",
                 feedback_level="warning",
+                feedback_severity=self.body_straight_angle_threshold - metrics["average_body_angle"],
                 capture_feedback_frame=True,
             )
 
@@ -71,6 +72,7 @@ class PlankRule(BaseExerciseRule):
                 feedback="Lift your hips slightly to avoid sagging.",
                 feedback_code="plank_hips_sagging",
                 feedback_level="warning",
+                feedback_severity=metrics["average_hip_line_offset"] - self.hip_offset_threshold,
                 capture_feedback_frame=True,
             )
 
@@ -83,6 +85,7 @@ class PlankRule(BaseExerciseRule):
                 feedback="Lower your hips slightly to keep a straight plank.",
                 feedback_code="plank_hips_too_high",
                 feedback_level="warning",
+                feedback_severity=abs(metrics["average_hip_line_offset"]) - self.hip_offset_threshold,
                 capture_feedback_frame=True,
             )
 
